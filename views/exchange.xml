@@ -1,0 +1,46 @@
+<odoo>
+    <record id="fo_trading_exchange_view_form" model="ir.ui.view">
+        <field name="name">fo_trading_exchange_view_form</field>
+        <field name="model">fo.trading.exchange</field>
+        <field name="arch" type="xml">
+            <form string="fo_trading_exchange_form">
+                <header>
+                    <button name="test_exchange" type="object" string="测试连接"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="exchange_type"/>
+                        <field name="api_key"/>
+                        <field name="api_secret"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="fo_trading_exchange_view_tree" model="ir.ui.view">
+        <field name="name">fo_trading_exchange_view_tree</field>
+        <field name="model">fo.trading.exchange</field>
+        <field name="arch" type="xml">
+            <list string="fo_trading_exchange_tree">
+                <field name="name"/>
+                <field name="exchange_type"/>
+                <field name="api_key"/>
+                <field name="api_secret"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="fo_trading_exchange_action" model="ir.actions.act_window">
+        <field name="name">交易所管理</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">fo.trading.exchange</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+
+    <menuitem id="fo_trading_exchange_menu" name="交易所管理"
+              parent="fo_trading.fo_trading_menu_root"
+              action="fo_trading_exchange_action" sequence="999"/>
+</odoo>

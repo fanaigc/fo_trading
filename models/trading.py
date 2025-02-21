@@ -1,0 +1,260 @@
+import logging
+
+from odoo import api, fields, models, exceptions
+import ccxt
+from ..apis import CcxtApis
+from datetime import datetime, timedelta
+
+
+def get_now_datetime():
+    """
+    获取当前的时间
+    """
+    return datetime.now() + timedelta(hours=8)
+    # return datetime.now()
+
+
+class Trading(models.Model):
+    _name = 'fo.trading.trading'
+    _description = "手动交易"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+
+    def _default_name(self):
+        """
+        生成默认名称
+        """
+        now_time = get_now_datetime()
+        now_time_str = now_time.strftime("%Y%m%d")
+        trading_num = self.search_count([('create_year', '=', now_time.year),
+                                         ('create_month', '=', now_time.month),
+                                         ('create_day', '=', now_time.day)])
+        name = 'T{}-{}'.format(now_time_str, trading_num + 1)
+        return name
+
+    name = fields.Char("交易编号", default=_default_name)
+    state = fields.Selection([('0', '编辑中'), ('1', '监控中'), ('2', '已结束')], default='0', string="状态",
+                             tracking=True)
+    entry_price = fields.Float("入场价格", digits=(16, 9), default=0, help="入场价格，0为市价买入", required=True,
+                               tracking=True)
+    buy_price = fields.Float("实际买入价格", digits=(16, 9), default=0,
+                             tracking=True)
+    stop_loss_price = fields.Float("止损价格", digits=(16, 9), required=True,
+                                   help="止损价格，如果不输入默认为20根K线最小值", tracking=True)
+    stop_win_price = fields.Float("止盈价格", digits=(16, 9), help="如果没有止盈价格，则动态止盈", tracking=True)
+    side = fields.Selection([('long', "做多"), ('short', "做空")], string="方向", required=True)
+    max_loss = fields.Float("最大亏损", default=10, tracking=True)
+    timeframe = fields.Selection([
+        ('1m', '1分钟'), ('5m', '5分钟'), ('15m', '15分钟'),
+        ('30m', '30分钟'), ('1h', '1小时'), ('4h', '4小时'),
+        ('1d', '天线'), ('1w', '周线')], default='4h', string='参考周期')
+
+    open_remark = fields.Html("开仓说明", required=True)
+    close_remark = fields.Html("平仓总结")
+    pnl = fields.Float("收益额", digits=(16, 3))
+    pnl_fee = fields.Float("手续费", digits=(16, 3))
+    is_has_position = fields.Boolean("是否拥有过仓位", default=False)
+    exchange_order_id = fields.Char("交易所订单ID")
+    error_msg = fields.Char("错误信息")
+
+    @api.depends("pnl", "max_loss")
+    def _compute_pnl_rate(self):
+        """
+        自动计算收益率
+        """
+        for record in self:
+            if record.max_loss == 0:
+                record.pnl_rate = 0
+            else:
+                record.pnl_rate = record.pnl / record.max_loss
+
+    pnl_rate = fields.Float("收益率", store=True, digits=(16, 3), help="针对最大亏损计算比例",
+                            compute=_compute_pnl_rate)
+
+    create_year = fields.Integer('年', default=lambda x: get_now_datetime().year)
+    create_month = fields.Integer('月', default=lambda x: get_now_datetime().month)
+    create_day = fields.Integer('日', default=lambda x: get_now_datetime().day)
+
+    # 外键字段
+    symbol_id = fields.Many2one("fo.trading.symbol", string="币种", required=True)
+    exchange_id = fields.Many2one("fo.trading.exchange", string="交易所", required=True)
+
+    # exchange_type = fields.Selection([('binance', 'binance'), ('gate', 'gate')],
+    #                                  default='binance', string="交易所类型")
+    #
+    # api_key = fields.Char("API Key")
+    # api_secret = fields.Char("API Secret")
+
+
+class TradingButton(models.Model):
+    _inherit = 'fo.trading.trading'
+
+    def _cron(self):
+        """
+        定时任务
+        """
+        print("定时任务执行")
+        instance = self.search([('state', '=', '1')], limit=1)
+        if instance:
+            instance.core()
+
+    def check_args(self):
+        """
+        校验参数
+        """
+        # self.corn()
+        pass
+
+    def start(self):
+        """
+        程序启动
+        """
+        self.state = '1'
+
+    def stop(self):
+        """
+        程序停止
+        """
+        exchange = self.exchange_id.get_exchange()
+        o = exchange.order(self.symbol_id.name)
+        # 先清仓
+        o.close_order(self.side)
+
+        # 取消所有挂单
+        o.cancel_all_order()
+
+        self.state = '2'
+
+    def core(self):
+        """
+        量化核心代码，需要先初始化交易所对象
+        1. 检查是否拥有过仓位
+        2. 没有仓位 - 监控买入
+        3. 有仓位 - 监控是否平仓
+        """
+        exchange = self.exchange_id.get_exchange()
+
+        if self.is_has_position:
+            self.core_has_position(exchange)
+        else:
+            self.core_not_position(exchange)
+
+    def core_not_position(self, exchange):
+        """
+        监控买入逻辑
+        1. 判断是否有仓位
+        2. 无仓位 进行挂单
+            1. 计算需要买入的仓位价值
+            2. 入场价格为0，直接买入
+            3. 有入场价格，判断是否挂单
+            4. 进行挂单操作
+        3. 有仓位 修改仓位状态
+        """
+        symbol_name = self.symbol_id.name
+        m = exchange.market(symbol_name)
+        u = exchange.user(symbol_name)
+        o = exchange.order(symbol_name)
+        kd = exchange.kdata(symbol_name)
+        c = exchange.compute(symbol_name)
+
+        now_value = u.get_position_value(side=self.side)
+        # 有仓位 修改仓位状态
+        if now_value:
+            self.is_has_position = True
+            return
+
+        # 无仓位 进行挂单
+        # 1. 计算需要买入的仓位价值
+        need_buy_amount = c.get_buy_amount_for_stop_price(self.side,
+                                                          self.stop_loss_price,
+                                                          self.max_loss,
+                                                          self.entry_price)
+        if not need_buy_amount:
+            self.state = '2'
+            logging.error("未计算出可以购买的仓位，不进行购买！")
+            return
+
+        # 2. 判断一下entry_price是否为0，是否选择市价直接买进
+        if self.entry_price == 0:
+            logging.info("{} - 准备市价买入：{}".format(symbol_name, need_buy_amount))
+            try:
+                m.set_level(10)
+                order_info = o.open_order(self.side, need_buy_amount, log=True)
+                self.exchange_order_id = order_info['id']
+
+            except Exception as e:
+                self.state = '2'
+                self.error_msg = '市价买入失败！异常值：{}'.format(e)
+                logging.error(self.error_msg)
+
+            buy_price = u.get_position_avg_buy_price(self.side)
+            if not buy_price:
+                self.state = '2'
+                self.error_msg = '市价买入后，还是没有仓位'
+                logging.error(self.error_msg)
+
+            self.is_has_position = True
+            self.buy_price = buy_price
+            return
+
+        # 3. 限价进行买入
+        # 先检查一下订单号是否已经成交
+        # if self.exchange_order_id:
+        #     state = o.get_order_info_status(self.exchange_order_id)
+        #     # 判断状态是否已经成交
+        #     if state == 1:
+        #         # 已经成功买入
+        #         self.is_has_position = True
+        #         self.buy_price = self.entry_price
+        #         return
+
+        # 3.1 先查看entry_price已经挂单的amount
+        amount = o.get_open_order_amount(self.side, self.entry_price)
+        need_buy_amount = need_buy_amount - amount
+        if need_buy_amount > 0:
+            logging.info("{} - 准备限价：{}, 买入：{}".format(symbol_name, self.entry_price, need_buy_amount))
+
+            try:
+                m.set_level(10)
+                order_info = o.open_order(self.side, need_buy_amount, self.entry_price, log=True)
+                self.exchange_order_id = o.get_order_id(order_info)
+            except Exception as e:
+                self.state = '2'
+                self.error_msg = '限价单买入失败！异常值：{}'.format(e)
+                logging.error(self.error_msg)
+
+    def core_has_position(self, exchange):
+        """
+        监控平仓逻辑
+        1. 查看当前仓位是否存在
+        2. 不存在则更新订单状态
+        3. 存在则进行挂止损和止盈单
+        """
+        symbol_name = self.symbol_id.name
+        m = exchange.market(symbol_name)
+        u = exchange.user(symbol_name)
+        o = exchange.order(symbol_name)
+        kd = exchange.kdata(symbol_name)
+        c = exchange.compute(symbol_name)
+        now_amount = u.get_position_amount(self.side)
+
+        # 不存在则更新订单状态， 结束所有程序运行
+        if not now_amount:
+            self.state = '2'
+            info = o.get_last_close_order_info()
+            self.pnl = info['pnl']
+            self.pnl_fee = info['pnl_fee']
+            return
+
+        # 更新止损
+        o.stop_order_for_price(self.side, self.stop_loss_price)
+
+        # 更新止盈
+        if not self.stop_win_price:
+            return
+        now_close_amount = o.get_close_order_amount(self.side, self.stop_win_price)
+        # 如果在对应价位没有挂单止盈，说明止盈价格已经改动，取消所有挂单重新进行挂单
+        if not now_close_amount:
+            o.cancel_close_order(self.side, log=True)
+        need_close_amount = now_amount - now_close_amount
+        if need_close_amount:
+            o.close_order(self.side, need_close_amount, self.stop_win_price, log=True)

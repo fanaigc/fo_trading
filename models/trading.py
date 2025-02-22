@@ -32,7 +32,8 @@ class Trading(models.Model):
         return name
 
     name = fields.Char("交易编号", default=_default_name)
-    state = fields.Selection([('0', '编辑中'), ('1', '监控中'), ('2', '已结束')], default='0', string="状态",
+    state = fields.Selection([('-1', '编辑中'), ("0", "已过检"), ('1', '监控中'), ('2', '已结束')], default='-1',
+                             string="状态",
                              tracking=True)
     entry_price = fields.Float("入场价格", digits=(16, 9), default=0, help="入场价格，0为市价买入", required=True,
                                tracking=True)
@@ -92,7 +93,7 @@ class TradingButton(models.Model):
         """
         定时任务
         """
-        print("定时任务执行")
+        # print("定时任务执行")
         instance = self.search([('state', '=', '1')], limit=1)
         if instance:
             instance.core()
@@ -100,15 +101,59 @@ class TradingButton(models.Model):
     def check_args(self):
         """
         校验参数
+        1. 检查是否存在可以交易的仓位
+        2. 查看盈亏比是否有1：1，否则不可以进行交易
         """
-        # self.corn()
-        pass
+        exchange = self.exchange_id.get_exchange()
+        symbol_name = self.symbol_id.name
+        c = exchange.compute(symbol_name)
+        m = exchange.market(symbol_name)
+        now_price = m.get_now_price()
+        entry_price = self.entry_price
+        if not self.entry_price:
+            entry_price = now_price
+
+        # 1. 检查是否存在可以交易的仓位
+        need_buy_amount = c.get_buy_amount_for_stop_price(self.side,
+                                                          self.stop_loss_price,
+                                                          self.max_loss,
+                                                          entry_price)
+        if need_buy_amount:
+            raise exceptions.ValidationError("当前止损价格和入场价格无法计算出最小仓位！")
+        # 2. 查看盈亏比是否有1：1，否则不可以进行交易
+        ykb = 0
+        syl = 0
+        if self.stop_win_price:
+            if self.side == 'long':
+                ykb = (self.stop_win_price - entry_price) / (entry_price - self.stop_loss_price)
+                syl = (self.stop_win_price - entry_price) / entry_price
+            elif self.side == 'short':
+                ykb = (entry_price - self.stop_win_price) / (self.stop_loss_price - entry_price)
+                syl = (entry_price - self.stop_win_price) / entry_price
+
+            # 盈亏比小于1不交易
+            if ykb < 1:
+                raise exceptions.ValidationError("盈亏比小于1不适合交易！")
+
+            if syl < 0.05:
+                raise exceptions.ValidationError("收益率0.5%都没有就别做交易了!!")
+
+        self.state = '0'
+
+    def back_check(self):
+        """
+        回退状态
+        """
+        if self.is_has_position:
+            raise
+        self.state = '1'
 
     def start(self):
         """
         程序启动
         """
         self.state = '1'
+        self.core()
 
     def stop(self):
         """
@@ -116,8 +161,11 @@ class TradingButton(models.Model):
         """
         exchange = self.exchange_id.get_exchange()
         o = exchange.order(self.symbol_id.name)
+        u = exchange.user(self.symbol_id.name)
         # 先清仓
-        o.close_order(self.side)
+        now_amount = u.get_position_amount(self.side)
+        if now_amount:
+            o.close_order(self.side, now_amount)
 
         # 取消所有挂单
         o.cancel_all_order()

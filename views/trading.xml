@@ -16,29 +16,30 @@
         <field name="arch" type="xml">
             <form string="fo_trading_trading_form">
                 <header>
-                    <button name="check_args" type="object" string="校验参数"/>
-                    <button name="start" type="object" string="开始交易"/>
-                    <button name="stop" type="object" string="立即停止"/>
+                    <button name="check_args" type="object" string="校验参数" invisible="state != '-1'"/>
+                    <button name="back_check" type="object" string="回退编辑" invisible="state in ['-1', '1'] or is_has_position"/>
+                    <button name="start" type="object" string="开始交易" invisible="state != '1'"/>
+                    <button name="stop" type="object" string="立即停止" invisible="state != '1'"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
                     <group>
                         <field name="name" readonly="1"/>
-                        <field name="symbol_id"/>
-                        <field name="exchange_id"/>
-                        <field name="timeframe"/>
-                        <field name="max_loss"/>
-                        <field name="side"/>
-                        <field name="entry_price"/>
+                        <field name="symbol_id" readonly="state != '-1'"/>
+                        <field name="exchange_id" readonly="state != '-1'"/>
+                        <field name="timeframe" readonly="state != '-1'"/>
+                        <field name="max_loss" readonly="state != '-1'"/>
+                        <field name="side" readonly="state != '-1'"/>
+                        <field name="entry_price" readonly="state != '-1'"/>
                         <field name="buy_price" readonly="1"/>
-                        <field name="stop_loss_price"/>
-                        <field name="stop_win_price"/>
+                        <field name="stop_loss_price" readonly="state == '2'"/>
+                        <field name="stop_win_price" readonly="state == '2'"/>
                         <field name="open_remark"/>
                         <field name="close_remark"/>
                         <field name="pnl" readonly="1"/>
                         <field name="pnl_fee" readonly="1"/>
                         <field name="pnl_rate"/>
-                        <field name="is_has_position"/>
+                        <field name="is_has_position" readonly="1"/>
                         <field name="exchange_order_id" readonly="1"/>
                         <field name="error_msg" readonly="1"/>
                     </group>

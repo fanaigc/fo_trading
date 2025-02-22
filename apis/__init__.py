@@ -5,6 +5,7 @@ from .order import Order
 from .kdata import KData
 from .compute import Compute
 
+
 class CcxtApis(object):
     def __init__(self, exchange_name, api_key, api_secret, *args, **kwargs):
         """

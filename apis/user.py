@@ -46,7 +46,7 @@ class User(BaseFunc):
             return balance_info['free']
         return balance_info['total']
 
-    @BaseFunc.while_loop
+    # @BaseFunc.while_loop
     def get_positions(self):
         """
         获取仓位信息
@@ -56,6 +56,9 @@ class User(BaseFunc):
             position_infos = self.handle('fetch_account_positions', [self.symbol])
         else:
             position_infos = self.handle('fetch_position', self.symbol)
+
+        if not position_infos:
+            return 0
 
         return self._parse_positions_info(position_infos)
 
@@ -89,6 +92,7 @@ class User(BaseFunc):
             return self.get_balance('spot', self.symbol) * self.m.get_now_price()
 
         position_infos = self.get_positions()
+
         if not position_infos:
             return 0
         if side not in ['long', 'short']:

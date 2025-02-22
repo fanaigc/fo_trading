@@ -108,6 +108,8 @@ class TradingButton(models.Model):
         symbol_name = self.symbol_id.name
         c = exchange.compute(symbol_name)
         m = exchange.market(symbol_name)
+        # u = exchange.user(symbol_name)
+
         now_price = m.get_now_price()
         entry_price = self.entry_price
         if not self.entry_price:
@@ -118,7 +120,7 @@ class TradingButton(models.Model):
                                                           self.stop_loss_price,
                                                           self.max_loss,
                                                           entry_price)
-        if need_buy_amount:
+        if not need_buy_amount:
             raise exceptions.ValidationError("当前止损价格和入场价格无法计算出最小仓位！")
         # 2. 查看盈亏比是否有1：1，否则不可以进行交易
         ykb = 0
@@ -135,7 +137,7 @@ class TradingButton(models.Model):
             if ykb < 1:
                 raise exceptions.ValidationError("盈亏比小于1不适合交易！")
 
-            if syl < 0.05:
+            if syl < 0.005:
                 raise exceptions.ValidationError("收益率0.5%都没有就别做交易了!!")
 
         self.state = '0'
@@ -144,9 +146,7 @@ class TradingButton(models.Model):
         """
         回退状态
         """
-        if self.is_has_position:
-            raise
-        self.state = '1'
+        self.state = '-1'
 
     def start(self):
         """

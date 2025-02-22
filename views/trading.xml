@@ -16,10 +16,10 @@
         <field name="arch" type="xml">
             <form string="fo_trading_trading_form">
                 <header>
+                     <button name="start" class="oe_highlight" type="object" string="开始交易" invisible="state != '0'"/>
+                    <button name="stop" type="object" class="oe_highlight" string="立即停止" invisible="state != '1'"/>
                     <button name="check_args" type="object" string="校验参数" invisible="state != '-1'"/>
-                    <button name="back_check" type="object" string="回退编辑" invisible="state in ['-1', '1'] or is_has_position"/>
-                    <button name="start" type="object" string="开始交易" invisible="state != '1'"/>
-                    <button name="stop" type="object" string="立即停止" invisible="state != '1'"/>
+                    <button name="back_check" type="object" string="回退编辑" invisible="is_has_position"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>

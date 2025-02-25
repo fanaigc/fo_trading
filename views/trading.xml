@@ -26,7 +26,7 @@
                     <group>
                         <group>
                             <field name="symbol_id" readonly="state != '-1'"/>
-                            <field name="timeframe" readonly="state != '-1'"/>
+                            <field name="timeframe" />
                             <field name="side" readonly="state != '-1'"/>
                             <field name="entry_price" readonly="state != '-1'"/>
                             <field name="stop_loss_price" readonly="state == '2'"/>

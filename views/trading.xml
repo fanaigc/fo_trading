@@ -16,7 +16,7 @@
         <field name="arch" type="xml">
             <form string="fo_trading_trading_form">
                 <header>
-                     <button name="start" class="oe_highlight" type="object" string="开始交易" invisible="state != '0'"/>
+                    <button name="start" class="oe_highlight" type="object" string="开始交易" invisible="state != '0'"/>
                     <button name="stop" type="object" class="oe_highlight" string="立即停止" invisible="state != '1'"/>
                     <button name="check_args" type="object" string="校验参数" invisible="state != '-1'"/>
                     <button name="back_check" type="object" string="回退编辑" invisible="is_has_position"/>
@@ -24,25 +24,35 @@
                 </header>
                 <sheet>
                     <group>
-                        <field name="name" readonly="1"/>
-                        <field name="symbol_id" readonly="state != '-1'"/>
-                        <field name="exchange_id" readonly="state != '-1'"/>
-                        <field name="timeframe" readonly="state != '-1'"/>
-                        <field name="max_loss" readonly="state != '-1'"/>
-                        <field name="side" readonly="state != '-1'"/>
-                        <field name="entry_price" readonly="state != '-1'"/>
-                        <field name="buy_price" readonly="1"/>
-                        <field name="stop_loss_price" readonly="state == '2'"/>
-                        <field name="stop_win_price" readonly="state == '2'"/>
-                        <field name="open_remark"/>
-                        <field name="close_remark"/>
-                        <field name="pnl" readonly="1"/>
-                        <field name="pnl_fee" readonly="1"/>
-                        <field name="pnl_rate"/>
-                        <field name="is_has_position" readonly="1"/>
-                        <field name="exchange_order_id" readonly="1"/>
-                        <field name="error_msg" readonly="1"/>
+                        <group>
+                            <field name="symbol_id" readonly="state != '-1'"/>
+                            <field name="timeframe" readonly="state != '-1'"/>
+                            <field name="side" readonly="state != '-1'"/>
+                            <field name="entry_price" readonly="state != '-1'"/>
+                            <field name="stop_loss_price" readonly="state == '2'"/>
+                            <field name="stop_win_price" readonly="state == '2'"/>
+                        </group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="exchange_id" readonly="1"/>
+                            <field name="max_loss" readonly="1"/>
+                            <field name="buy_price" readonly="1"/>
+                            <field name="pnl" readonly="1"/>
+                            <field name="pnl_fee" readonly="1"/>
+                            <field name="pnl_rate"/>
+                            <field name="is_has_position" readonly="1"/>
+                            <field name="exchange_order_id" readonly="1"/>
+                            <field name="error_msg" readonly="1"/>
+                        </group>
                     </group>
+                    <notebook>
+                        <page string="加仓记录">
+                            <field name="open_remark"/>
+                        </page>
+                        <page string="平仓记录">
+                            <field name="close_remark"/>
+                        </page>
+                    </notebook>
                 </sheet>
                 <chatter/>
 
@@ -56,8 +66,7 @@
         <field name="arch" type="xml">
             <list string="fo_trading_trading_tree"
                   decoration-success="pnl_rate > 0"
-                  decoration-danger="0 >= pnl_rate > -1"
-                  decoration-muted="pnl_rate >= -1">
+                  decoration-danger="0 >= pnl_rate >= -1">
 
                 <field name="name" readonly="1"/>
                 <field name="state"/>

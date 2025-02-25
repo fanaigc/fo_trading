@@ -13,6 +13,17 @@ class Exchange(models.Model):
 
     api_key = fields.Char("API Key")
     api_secret = fields.Char("API Secret")
+    is_default = fields.Boolean("默认交易所", default=False)
+
+    def set_default(self):
+        """
+        设置交易所为默认交易所
+        """
+        self.ensure_one()
+        instances = self.search([('is_default', '=', True)])
+        for instance in instances:
+            instance.is_default = False
+        self.is_default = True
 
     def get_exchange(self):
         exchange = CcxtApis(exchange_name=self.exchange_type,

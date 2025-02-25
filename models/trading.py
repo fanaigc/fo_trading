@@ -43,13 +43,13 @@ class Trading(models.Model):
                                    help="止损价格，如果不输入默认为20根K线最小值", tracking=True)
     stop_win_price = fields.Float("止盈价格", digits=(16, 9), help="如果没有止盈价格，则动态止盈", tracking=True)
     side = fields.Selection([('long', "做多"), ('short', "做空")], string="方向", required=True)
-    max_loss = fields.Float("最大亏损", default=10, tracking=True)
+    max_loss = fields.Float("最大亏损", tracking=True)
     timeframe = fields.Selection([
         ('1m', '1分钟'), ('5m', '5分钟'), ('15m', '15分钟'),
         ('30m', '30分钟'), ('1h', '1小时'), ('4h', '4小时'),
-        ('1d', '天线'), ('1w', '周线')], default='4h', string='参考周期')
+        ('1d', '天线'), ('1w', '周线')], string='参考周期')
 
-    open_remark = fields.Html("开仓说明", required=True)
+    open_remark = fields.Html("开仓说明")
     close_remark = fields.Html("平仓总结")
     pnl = fields.Float("收益额", digits=(16, 3))
     pnl_fee = fields.Float("手续费", digits=(16, 3))
@@ -77,7 +77,7 @@ class Trading(models.Model):
 
     # 外键字段
     symbol_id = fields.Many2one("fo.trading.symbol", string="币种", required=True)
-    exchange_id = fields.Many2one("fo.trading.exchange", string="交易所", required=True)
+    exchange_id = fields.Many2one("fo.trading.exchange", string="交易所")
 
     # exchange_type = fields.Selection([('binance', 'binance'), ('gate', 'gate')],
     #                                  default='binance', string="交易所类型")
@@ -98,13 +98,37 @@ class TradingButton(models.Model):
         if instance:
             instance.core()
 
+    def set_default_exchange(self):
+        """
+        设置默认交易所
+        """
+        instance = self.exchange_id.search([('is_default', '=', True)], limit=1)
+        if not instance:
+            raise exceptions.ValidationError("请先设置默认交易所在进行交易！！")
+        self.exchange_id = instance.id
+
+    def set_max_loss(self, exchange):
+        """
+        设置最大亏损金额
+        1. 获取当前所有余额
+        2. 计算1%来作为最大亏损金额进行赋值
+        """
+        # 1. 获取当前所有余额
+        u = exchange.user(self.symbol_id.name)
+        balance = u.get_balance()
+
+        # 2. 计算1%做为最大亏损
+        self.max_loss = balance * 0.01
+
     def check_args(self):
         """
         校验参数
         1. 检查是否存在可以交易的仓位
         2. 查看盈亏比是否有1：1，否则不可以进行交易
         """
+        self.set_default_exchange()
         exchange = self.exchange_id.get_exchange()
+        self.set_max_loss(exchange)
         symbol_name = self.symbol_id.name
         c = exchange.compute(symbol_name)
         m = exchange.market(symbol_name)
@@ -147,6 +171,7 @@ class TradingButton(models.Model):
         回退状态
         """
         self.state = '-1'
+        self.name = self._default_name()
 
     def start(self):
         """

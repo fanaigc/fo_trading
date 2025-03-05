@@ -190,7 +190,10 @@ class TradingButton(models.Model):
         # 先清仓
         now_amount = u.get_position_amount(self.side)
         if now_amount:
+            # 先执行一个平仓
             o.close_order(self.side, now_amount)
+            # 在计算一下这一单的收益情况
+            self.core_has_position(exchange)
 
         # 取消所有挂单
         o.cancel_all_order()

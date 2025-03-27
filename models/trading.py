@@ -14,6 +14,145 @@ def get_now_datetime():
     # return datetime.now()
 
 
+class TradingSub(models.Model):
+    _name = 'fo.trading.trading.sub'
+    _description = "加仓订单"
+
+    state = fields.Selection([('1', '监控中'), ('2', '已完成'), ('-1', "无法交易")], default='1', string="状态")
+    entry_price = fields.Float("入场价格", digits=(16, 9), default=0, help="入场价格，0为市价买入")
+    stop_loss_price = fields.Float("止损价格", digits=(16, 9), help="止损价格，如果不输入默认为20根K线最小值")
+    buy_price = fields.Float("实际买入价格", digits=(16, 9), default=0)
+    max_loss = fields.Float("最大亏损")
+    need_buy_amount = fields.Float("需要买入amount数量")
+    before_amount = fields.Float("加仓前的amount")
+    exchange_order_id = fields.Char("交易ID")
+
+    trading_id = fields.Many2one("fo.trading.trading", "父单", required=True)
+    error_msg = fields.Char("错误说明")
+    add_remark = fields.Html("加仓说明")
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        instances = super().create(vals_list)
+        for instance in instances:
+            instance.stop_loss_price = instance.trading_id.stop_loss_price
+            instance.before_amount = instances.trading_id.now_amount
+            instance.add_corn()
+        return instances
+
+    @api.model
+    def unlink(self):
+        for record in self:
+            if record.state != '1':
+                raise exceptions.UserError("只有在监控中的加仓记录才能删除！")
+        return super().unlink()
+
+    def add_corn(self):
+        """
+        加仓的核心方法
+        1. 计算加仓最大亏损金额，并写入参数
+        2. 计算需要加仓数量
+        3. 实行加仓操作
+        """
+        # 只有状态为监控中才可以交易
+        if self.state != '1':
+            return
+
+        # 1. 计算最大加仓亏损金额
+        trading_instance = self.trading_id
+        symbol_name = trading_instance.symbol_id.name
+        exchange = trading_instance.exchange_id.get_exchange()
+        c = exchange.compute(symbol_name)
+        m = exchange.market(symbol_name)
+        u = exchange.user(symbol_name)
+        o = exchange.order(symbol_name)
+        side = trading_instance.side
+        if not self.max_loss:
+            # 1.1 获取当前在监控中的所有最大亏损的和
+            all_max_loss_money = 0
+            for instance in self.env['fo.trading.trading'].search([('state', '=', '1')]):
+                all_max_loss_money += instance.max_loss
+            # 1.2 获取所有balance
+            max_balance = u.get_balance() - all_max_loss_money
+            # 1.3 计算出max_loss
+            self.max_loss = max_balance * trading_instance.exchange_id.add_max_loss_rate / 100
+
+            # 先计算出当前父类的最大亏损金额
+            if trading_instance.is_has_position:
+                max_loss = u.get_appoint_stop_loss_max_loss(trading_instance.side, self.stop_loss_price)
+            else:
+                max_loss = trading_instance.max_loss
+            # 计算出当前max_loss
+            now_max_loss = max_loss + self.max_loss
+            # 取当前计算出来的最大亏损和父类已经存在的最大亏损取最大值为实际的最大亏损
+            trading_instance.max_loss = max(now_max_loss, trading_instance.max_loss)
+
+        # 2. 计算需要加仓数量
+        if not self.need_buy_amount:
+            entry_price = self.entry_price
+            if not self.entry_price:
+                entry_price = m.get_now_price()
+            self.need_buy_amount = c.get_buy_amount_for_stop_price(trading_instance.side,
+                                                                   self.stop_loss_price,
+                                                                   self.max_loss,
+                                                                   entry_price)
+        # 2.1 如果还是没有需要购买的amount，则退出交易
+        if not self.need_buy_amount:
+            self.state = '-1'
+            self.error_msg = '无法计算出买入仓位！'
+            return
+
+        # 3. 实行加仓操作
+        need_buy_amount = self.need_buy_amount
+        # 3.1 市价买入的操作
+        if self.entry_price == 0:
+            logging.info("{} - 准备市价买入：{}".format(symbol_name, need_buy_amount))
+            try:
+                order_info = o.open_order(side, need_buy_amount, log=True)
+                self.exchange_order_id = order_info['id']
+
+            except Exception as e:
+                self.state = '-1'
+                self.error_msg = '市价买入失败！异常值：{}'.format(e)
+                logging.error(self.error_msg)
+
+            buy_price = u.get_position_avg_buy_price(side)
+            if not buy_price:
+                self.state = '-1'
+                self.error_msg = '市价买入后，还是没有仓位'
+                logging.error(self.error_msg)
+
+            self.state = '2'
+            self.buy_price = buy_price
+            return
+        # 3.2 限价买入的操作
+        # 3.2.1 有订单，则判断订单是否成交
+        if self.exchange_order_id:
+            # 判断交易订单是否已经结束
+            if not o.order_is_closed(self.exchange_order_id):
+                return
+            # 交易完成后计算最大亏损额度
+            max_loss = c.get_max_loss(side, self.stop_loss_price)
+            if max_loss > trading_instance.max_loss:
+                trading_instance.max_loss = max_loss
+
+            # 交易结束后进行赋值
+            self.buy_price = self.entry_price
+            self.state = '2'
+            return
+
+        # 3.2.2 没有订单，则进行挂单
+        logging.info("{} - 准备限价：{}, 买入：{}".format(symbol_name, self.entry_price, need_buy_amount))
+
+        try:
+            order_info = o.open_order(side, need_buy_amount, self.entry_price, log=True)
+            self.exchange_order_id = o.get_order_id(order_info)
+        except Exception as e:
+            self.state = '2'
+            self.error_msg = '限价单买入失败！异常值：{}'.format(e)
+            logging.error(self.error_msg)
+
+
 class Trading(models.Model):
     _name = 'fo.trading.trading'
     _description = "手动交易"
@@ -43,6 +182,7 @@ class Trading(models.Model):
                                    help="止损价格，如果不输入默认为20根K线最小值", tracking=True)
     stop_win_price = fields.Float("止盈价格", digits=(16, 9), help="如果没有止盈价格，则动态止盈", tracking=True)
     side = fields.Selection([('long', "做多"), ('short', "做空")], string="方向", required=True)
+    now_amount = fields.Float("当前的amount")
     max_loss = fields.Float("最大亏损", tracking=True)
     timeframe = fields.Selection([
         ('1m', '1分钟'), ('5m', '5分钟'), ('15m', '15分钟'),
@@ -78,6 +218,7 @@ class Trading(models.Model):
     # 外键字段
     symbol_id = fields.Many2one("fo.trading.symbol", string="币种", required=True)
     exchange_id = fields.Many2one("fo.trading.exchange", string="交易所")
+    trading_sub_ids = fields.One2many('fo.trading.trading.sub', 'trading_id', string="加仓订单")
 
     # exchange_type = fields.Selection([('binance', 'binance'), ('gate', 'gate')],
     #                                  default='binance', string="交易所类型")
@@ -93,10 +234,15 @@ class TradingButton(models.Model):
         """
         定时任务
         """
-        # print("定时任务执行")
+        # 查询所有正在运行中的订单
         instance = self.search([('state', '=', '1')], limit=1)
         if instance:
+            # 按顺序执行核心
             instance.core()
+
+            # 核心执行完毕后，执行加仓操作
+            for sub_instance in instance.trading_sub_ids:
+                sub_instance.add_corn()
 
     def set_default_exchange(self):
         """
@@ -113,12 +259,17 @@ class TradingButton(models.Model):
         1. 获取当前所有余额
         2. 计算1%来作为最大亏损金额进行赋值
         """
-        # 1. 获取当前所有余额
-        u = exchange.user(self.symbol_id.name)
-        balance = u.get_balance()
+        # 1.1 获取当前在监控中的所有最大亏损的和
+        all_max_loss_money = 0
+        for instance in self.env['fo.trading.trading'].search([('state', '=', '1')]):
+            all_max_loss_money += instance.max_loss
 
-        # 2. 计算1%做为最大亏损
-        self.max_loss = balance * 0.01
+        # 1.2 获取所有balance
+        u = exchange.user(self.symbol_id.name)
+        max_balance = u.get_balance() - all_max_loss_money
+
+        # 2. 获取配置的最大亏损百分比
+        self.max_loss = max_balance * self.exchange_id.open_max_loss_rate / 100
 
     def check_args(self):
         """
@@ -126,6 +277,11 @@ class TradingButton(models.Model):
         1. 检查是否存在可以交易的仓位
         2. 查看盈亏比是否有1：1，否则不可以进行交易
         """
+        # 判断一下是否已经存在当前币种正在交易的订单，存在则不允许校验通过
+        instance = self.search([('state', '=', '1'), ('symbol_id', '=', self.symbol_id.id)], limit=1)
+        if instance:
+            raise exceptions.ValidationError(
+                "当前币种：{}，已经存在正在交易的订单，不允许重复创建！".format(self.symbol_id.name))
         self.set_default_exchange()
         exchange = self.exchange_id.get_exchange()
         self.set_max_loss(exchange)
@@ -163,7 +319,7 @@ class TradingButton(models.Model):
 
             if syl < 0.005:
                 raise exceptions.ValidationError("收益率0.5%都没有就别做交易了!!")
-
+        m.set_max_level()
         self.state = '0'
 
     def back_check(self):
@@ -172,6 +328,9 @@ class TradingButton(models.Model):
         """
         self.state = '-1'
         self.name = self._default_name()
+        # 删除所有的加仓记录
+        for instance in self.trading_sub_ids:
+            instance.unlink()
 
     def start(self):
         """
@@ -180,6 +339,34 @@ class TradingButton(models.Model):
         self.state = '1'
         self.core()
 
+    def add(self):
+        """
+        执行加仓操作
+        1. 判断当前是否可以进行加仓
+        2. 弹出加仓form图表
+        """
+        # 1. 判断当前是否可以进行加仓
+        instances = self.trading_sub_ids
+        can_add = True
+        for instance in instances:
+            if instance.state == '1':
+                can_add = False
+                break
+        if not can_add:
+            raise exceptions.ValidationError("当前还有为加仓成功的订单，不可以进行加仓！")
+
+        # 2. 弹出form图表
+        return {
+            'name': "加仓",
+            'type': "ir.actions.act_window",
+            'res_model': 'fo.trading.trading.sub',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_trading_id': self.id
+            }
+        }
+
     def stop(self):
         """
         程序停止
@@ -187,7 +374,7 @@ class TradingButton(models.Model):
         exchange = self.exchange_id.get_exchange()
         o = exchange.order(self.symbol_id.name)
         u = exchange.user(self.symbol_id.name)
-        # 先清仓
+        # 先清仓00
         now_amount = u.get_position_amount(self.side)
         if now_amount:
             # 先执行一个平仓
@@ -253,7 +440,6 @@ class TradingButton(models.Model):
         if self.entry_price == 0:
             logging.info("{} - 准备市价买入：{}".format(symbol_name, need_buy_amount))
             try:
-                m.set_level(10)
                 order_info = o.open_order(self.side, need_buy_amount, log=True)
                 self.exchange_order_id = order_info['id']
 
@@ -290,7 +476,6 @@ class TradingButton(models.Model):
             logging.info("{} - 准备限价：{}, 买入：{}".format(symbol_name, self.entry_price, need_buy_amount))
 
             try:
-                m.set_level(10)
                 order_info = o.open_order(self.side, need_buy_amount, self.entry_price, log=True)
                 self.exchange_order_id = o.get_order_id(order_info)
             except Exception as e:
@@ -312,6 +497,7 @@ class TradingButton(models.Model):
         kd = exchange.kdata(symbol_name)
         c = exchange.compute(symbol_name)
         now_amount = u.get_position_amount(self.side)
+        self.now_amount = now_amount
 
         # 不存在则更新订单状态， 结束所有程序运行
         if not now_amount:

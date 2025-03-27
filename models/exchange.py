@@ -15,6 +15,9 @@ class Exchange(models.Model):
     api_secret = fields.Char("API Secret")
     is_default = fields.Boolean("默认交易所", default=False)
 
+    open_max_loss_rate = fields.Float("开仓最大亏损比例%", default=1)
+    add_max_loss_rate = fields.Float("加仓最大亏损比例%", default=0.5)
+
     def set_default(self):
         """
         设置交易所为默认交易所

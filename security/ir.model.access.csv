@@ -2,3 +2,4 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 fo_trading.access_fo_trading_symbol,access_fo_trading_symbol,fo_trading.model_fo_trading_symbol,base.group_user,1,1,1,1
 fo_trading.access_fo_trading_exchange,access_fo_trading_exchange,fo_trading.model_fo_trading_exchange,base.group_user,1,1,1,1
 fo_trading.access_fo_trading_trading,access_fo_trading_trading,fo_trading.model_fo_trading_trading,base.group_user,1,1,1,1
+fo_trading.access_fo_trading_trading_sub,access_fo_trading_trading_sub,fo_trading.model_fo_trading_trading_sub,base.group_user,1,1,1,1

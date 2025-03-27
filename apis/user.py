@@ -62,6 +62,30 @@ class User(BaseFunc):
 
         return self._parse_positions_info(position_infos)
 
+    def get_appoint_stop_loss_max_loss(self, side, stop_loss_price):
+        """
+        获取指定止损价格最大亏损的金额
+        """
+        amount = self.get_position_amount(side)
+        if not amount:
+            return 0
+
+        avg_buy_price = self.get_position_avg_buy_price(side)
+        commission = '0.05 / 100'
+        if side == 'long':
+            # 仓位亏损的金额
+            max_loss = (avg_buy_price - stop_loss_price) * amount
+            # 加上手续费
+            max_loss = max_loss + (stop_loss_price + avg_buy_price) * commission
+        elif side == 'short':
+            # 仓位亏损的金额
+            max_loss = (stop_loss_price - avg_buy_price) * amount
+            # 加上手续费
+            max_loss = max_loss + (stop_loss_price + avg_buy_price) * commission
+        else:
+            return False
+        return 0
+
     def get_position_amount(self, side=None):
         """
         获取仓位数量

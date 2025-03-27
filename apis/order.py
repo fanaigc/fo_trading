@@ -608,15 +608,23 @@ class Order(BaseFunc):
         :return:
         """
         order_info = self.get_order_id_info(order_id)
-        status = 0
+        status = False
         if order_info:
             status = order_info['status']
 
-        if status == 'closed':
-            status = 1
-        else:
-            status = 0
         return status
+
+    def order_is_closed(self, order_id):
+        """
+        判断订单是否已经结束
+        """
+        status = self.get_order_info_status(order_id)
+        if not status:
+            return True
+
+        if status == 'closed':
+            return True
+        return False
 
     def _cancel_order_for_ids(self, cancel_order_ids, params=None):
         """

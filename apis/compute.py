@@ -1,5 +1,6 @@
 from .base import BaseFunc
 from .market import Market
+from .user import  User
 
 
 class Compute(BaseFunc):
@@ -7,6 +8,7 @@ class Compute(BaseFunc):
         super(Compute, self).__init__(symbol, exchange, *args, **kwargs)
         # 初始化一些交易参数
         self.m = Market(symbol=symbol, exchange=self.exchange, *args, **kwargs)
+        self.u = User(symbol=symbol, exchange=self.exchange, *args, **kwargs)
 
     def get_buy_amount_for_stop_price(self, side, stop_loss_price, max_loss_money, now_price=0):
         """
@@ -48,3 +50,25 @@ class Compute(BaseFunc):
             #     return self.m.get_can_order_amount(amount)
             return self.m.get_can_order_amount(amount)
         return 0
+
+    def get_max_loss(self, side, stop_loss_price):
+        """
+        获取最大亏损金额
+        正数是亏损，负数是赚取
+        :param side:
+        :param stop_loss_price:
+        :return:
+        """
+        buy_price = self.u.get_position_avg_buy_price(side)
+        now_amount = self.u.get_position_amount(side)
+
+        commission = 0.05 / 100  # 手续费 0.05%
+        buy_commission = buy_price * commission * now_amount
+        stop_loss_commission = stop_loss_price * commission * now_amount
+        all_commission = buy_commission + stop_loss_commission
+        max_loss = 0
+        if side == 'long':
+            max_loss = (buy_price - stop_loss_price) * now_amount
+        elif side == 'short':
+            max_loss = (stop_loss_price - buy_price) * now_amount
+        return max_loss + all_commission

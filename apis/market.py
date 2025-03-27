@@ -18,7 +18,7 @@ class Market(BaseFunc):
         self.order_price_deviate = self.info.get('order_price_deviate')  # gate目前使用，最大交易偏差
 
         # 交易信息
-        self.max_level = self.limits.get('leverage').get('max')
+        self.max_level = min(self.limits.get('leverage').get('max'), 100)
 
     @BaseFunc.while_loop
     def get_now_price(self):
@@ -119,3 +119,9 @@ class Market(BaseFunc):
             params['cross_leverage_limit'] = level
         res = self.handle('set_leverage', level, self.symbol, params=params)
         return res
+
+    def set_max_level(self):
+        """
+        设置最大杠杆倍数
+        """
+        self.set_level(self.max_level)

@@ -73,7 +73,7 @@ class User(BaseFunc):
             return 0
 
         avg_buy_price = self.get_position_avg_buy_price(side)
-        commission = '0.05 / 100'
+        commission = 0.05 / 100
         if side == 'long':
             # 仓位亏损的金额
             max_loss = (avg_buy_price - stop_loss_price) * amount
@@ -86,7 +86,7 @@ class User(BaseFunc):
             max_loss = max_loss + (stop_loss_price + avg_buy_price) * commission
         else:
             return False
-        return 0
+        return max_loss
 
     def get_position_amount(self, side=None):
         """

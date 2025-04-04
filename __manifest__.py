@@ -26,7 +26,8 @@ Long description of module's purpose
 
         'views/symbol.xml',
         'views/exchange.xml',
-        'views/trading.xml'
+        'views/trading.xml',
+        'views/strategy_trading.xml'
     ],
     # only loaded in demonstration mode
     'demo': [

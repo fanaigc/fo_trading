@@ -196,6 +196,7 @@ class Trading(models.Model):
     is_has_position = fields.Boolean("是否拥有过仓位", default=False)
     exchange_order_id = fields.Char("交易所订单ID")
     error_msg = fields.Char("错误信息")
+    open_time = fields.Char("开仓时间", help='开仓时间可以帮助进行获取收益率')
 
     @api.depends("pnl", "max_loss")
     def _compute_pnl_rate(self):
@@ -208,7 +209,7 @@ class Trading(models.Model):
             else:
                 record.pnl_rate = record.pnl / record.max_loss
 
-    pnl_rate = fields.Float("收益率", store=True, digits=(16, 3), help="针对最大亏损计算比例",
+    pnl_rate = fields.Float("盈亏比", store=True, digits=(16, 3), help="针对最大亏损计算比例",
                             compute=_compute_pnl_rate)
 
     create_year = fields.Integer('年', default=lambda x: get_now_datetime().year)
@@ -319,7 +320,8 @@ class TradingButton(models.Model):
 
             if syl < 0.005:
                 raise exceptions.ValidationError("收益率0.5%都没有就别做交易了!!")
-        m.set_max_level()
+        level = min(c.get_max_lever(entry_price, self.stop_loss_price), m.max_level)
+        m.set_level(level)
         self.state = '0'
 
     def back_check(self):
@@ -423,6 +425,7 @@ class TradingButton(models.Model):
         # 有仓位 修改仓位状态
         if now_value:
             self.is_has_position = True
+            self.open_time = u.get_open_time(self.side)
             return
 
         # 无仓位 进行挂单
@@ -502,7 +505,9 @@ class TradingButton(models.Model):
         # 不存在则更新订单状态， 结束所有程序运行
         if not now_amount:
             self.state = '2'
-            info = o.get_last_close_order_info()
+            # 计算收益
+            info = u.get_open_time_pnl_info(self.side, self.open_time)
+            # info = o.get_last_close_order_info()
             self.pnl = info['pnl']
             self.pnl_fee = info['pnl_fee']
             return

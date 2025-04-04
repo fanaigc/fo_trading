@@ -133,7 +133,7 @@ class KData(BaseFunc):
 
     def get_kdata_min_price(self, k_time, ref=0, max_ref=0, ohlcv='low'):
         """
-        获取指定k_data指定维度的最小值
+        获取指定k_data指定维度的最小值, ref=0, max_ref=5, 就是取前5根包括最新一根K线的最小值
         :param ref: 前几位值，默认就是0就是当前的值
         :param max_ref: 最大取ref几个值，0就是默认所有
         :param k_time:
@@ -221,12 +221,31 @@ class KData(BaseFunc):
         if not self._verify_k_time(k_time):
             return False
 
-        self.auto_update_kdata(k_time, limit + 1)
+        self.auto_update_kdata(k_time, limit + 10)
 
         sma = talib.SMA(self._filter_kdata_price_for_ohlcv(k_time, ohlcv='close'), limit)
         if ref >= 0:
             return sma.iloc[-ref - 1]
         return sma
+
+    def get_ema(self, k_time, limit=20, ref=0):
+        """
+        获取ema数据
+        :param k_time:
+        :param limit:
+        :param ref:
+        :return:
+        """
+        if not self._verify_k_time(k_time):
+            return False
+
+        self.auto_update_kdata(k_time, limit * 3)
+
+        sma = talib.EMA(self._filter_kdata_price_for_ohlcv(k_time, ohlcv='close'), limit)
+        if ref >= 0:
+            return sma.iloc[-ref - 1]
+        return sma
+
 
     def get_atr(self, k_time, limit=14, ref=0):
         """

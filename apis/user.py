@@ -1,3 +1,5 @@
+import time
+
 from .base import BaseFunc
 from .market import Market
 
@@ -106,6 +108,24 @@ class User(BaseFunc):
 
         return abs(position_infos[side]['amount'])
 
+    def get_open_time(self, side=None):
+        """
+        获取开仓时间
+        :param side:
+        :return:
+        """
+        if not self.is_future:
+            return self.get_balance('spot', self.symbol)
+
+        if side not in ['long', 'short']:
+            return False
+
+        position_infos = self.get_positions()
+        if not position_infos:
+            return 0
+
+        return position_infos[side]['open_time']
+
     def get_position_value(self, side=None):
         """
         获取仓位价值
@@ -126,6 +146,31 @@ class User(BaseFunc):
             return 0
 
         return float(position_infos[side]['value'])
+
+    def get_open_time_pnl_info(self, side, open_time):
+        """
+        获取指定开仓时间的pnl信息
+        :param side:
+        :param open_time:
+        :return:
+        """
+        for i in range(10):
+            history_list = self.exchange.fetchPositionsHistory([self.symbol], params={'side': side})
+            for history in history_list:
+                info = history['info']
+                if open_time == info['first_open_time']:
+                    return {
+                        "pnl": info['pnl'],
+                        "pnl_pnl": info['pnl_pnl'],
+                        "pnl_fee": info['pnl_fee'],
+                    }
+            time.sleep(1)
+
+        return {
+            "pnl": 0,
+            "pnl_pnl": 0,
+            "pnl_fee": 0,
+        }
 
     def _get_binance_last_close_pnl(self, side):
         """
@@ -174,12 +219,15 @@ class User(BaseFunc):
                 last_close_pnl = position['last_close_pnl']
                 amount = float(position['size']) * self.m.amount_size
                 avg_buy_price = position['entry_price']
+                open_time = position['open_time']
                 if mode == 'dual_long':
+                    long_positions_info['open_time'] = open_time
                     long_positions_info['value'] = value
                     long_positions_info['last_close_pnl'] = last_close_pnl
                     long_positions_info['amount'] = amount
                     long_positions_info['avg_buy_price'] = avg_buy_price
                 elif mode == 'dual_short':
+                    short_positions_info['open_time'] = open_time
                     short_positions_info['value'] = value
                     short_positions_info['last_close_pnl'] = last_close_pnl
                     short_positions_info['amount'] = amount

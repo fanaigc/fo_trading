@@ -21,7 +21,7 @@ class CcxtApis(object):
             'secret': api_secret,
             'requests_trust_env': True
         })
-        self.exchange.load_markets()
+        # self.exchange.load_markets()
         self.side = kwargs.get('side')
 
     def market(self, symbol, *args, **kwargs):

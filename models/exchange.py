@@ -1,6 +1,9 @@
+import os.path
+
 from odoo import api, fields, models, exceptions
 import ccxt
 from ..apis import CcxtApis
+import json
 
 
 class Exchange(models.Model):
@@ -28,10 +31,18 @@ class Exchange(models.Model):
             instance.is_default = False
         self.is_default = True
 
-    def get_exchange(self):
+    def _get_exchange(self):
         exchange = CcxtApis(exchange_name=self.exchange_type,
                             api_key=self.api_key,
                             api_secret=self.api_secret)
+        return exchange
+
+    def get_exchange(self):
+        exchange = self._get_exchange()
+        markets, markets_by_id = self.get_markets()
+        exchange.exchange.markets = markets
+        # exchange.exchange.markets_by_id = markets_by_id
+        exchange.exchange.load_markets()
         return exchange
 
     def test_exchange(self):
@@ -50,3 +61,63 @@ class Exchange(models.Model):
 
         except Exception as e:
             raise exceptions.ValidationError("连接失败！")
+
+    def get_cache_file_path(self, file_name=None):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        father_path = os.path.dirname(current_dir)
+        cache_path = os.path.join(father_path, 'apis', 'cache')
+        if not file_name:
+            name = "markets"
+        else:
+            name = file_name
+        file_name = '{}-{}.json'.format(self.exchange_type, name)
+
+        file_path = os.path.join(cache_path, file_name)
+        return file_path
+
+    def get_markets(self):
+        """
+        获取ccxt中markets文件
+        1. 先获取缓存数据
+        2. 缓存数据不存在这获取在线的数据
+        """
+        file_path = self.get_cache_file_path()
+        markets = None
+        markets_by_id = None
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                try:
+                    markets = json.load(f)
+                except Exception as e:
+                    pass
+
+        file_path = self.get_cache_file_path("markets_by_id")
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                try:
+                    markets_by_id = json.load(f)
+                except Exception as e:
+                    pass
+
+        if not all([markets, markets_by_id]):
+            return self.update_markets()
+        return markets, markets_by_id
+
+    def update_markets(self):
+        """
+        更新market数据
+        """
+        exchange = self._get_exchange()
+        # 获取market
+        markets = exchange.exchange.load_markets()
+        file_path = self.get_cache_file_path()
+        with open(file_path, 'w') as f:
+            json.dump(markets, f)
+
+        # 获取markets_by_id
+        markets_by_id = exchange.exchange.set_markets(markets)
+        file_path_markets_by_id = self.get_cache_file_path("markets_by_id")
+        with open(file_path_markets_by_id, 'w') as f:
+            json.dump(markets_by_id, f)
+
+        return markets, markets_by_id

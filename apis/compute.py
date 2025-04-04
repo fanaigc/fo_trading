@@ -1,6 +1,6 @@
 from .base import BaseFunc
 from .market import Market
-from .user import  User
+from .user import User
 
 
 class Compute(BaseFunc):
@@ -72,3 +72,21 @@ class Compute(BaseFunc):
         elif side == 'short':
             max_loss = (stop_loss_price - buy_price) * now_amount
         return max_loss + all_commission
+
+    @staticmethod
+    def get_max_lever(entry_price, exit_price):
+        """
+        获取最大杠杆等级
+        # 1. 计算入场和退出亏损的百分比
+        # 2. 计算杠杆 100 / 最大亏损百分比
+        # 3. 优化杠杆 int后 - 1 最小是1
+        :param entry_price: 入场价格
+        :param exit_price:  退出价格
+        :return:
+        """
+        loss_rate = abs(entry_price - exit_price) / entry_price * 100
+        max_lever = 100 / loss_rate
+        if max_lever < 1:
+            raise ValueError("最大杠杆小于1，不可以进行交易！！")
+
+        return max(int(max_lever) - 1, 1)

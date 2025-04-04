@@ -467,8 +467,9 @@ class Order(BaseFunc):
         if self.exchange.id == 'binance':
             return self._get_orders()
         return self.handle('fetch_closed_orders', symbol=self.symbol, params={
-            'stop': True,
-            'status': 'open'
+            # 'stop': True,
+            'status': 'open',
+            'trigger': True
         })
 
     def _get_open_orders(self, side, price=None):
@@ -971,7 +972,6 @@ class Order(BaseFunc):
     def get_last_close_order_info(self):
         """
         获取最后一次交易收益信息
-
         """
         info = {
             "pnl": 0,

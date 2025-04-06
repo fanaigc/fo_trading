@@ -504,6 +504,7 @@ class TradingButton(models.Model):
 
         # 不存在则更新订单状态， 结束所有程序运行
         if not now_amount:
+            self.error_msg = '已经没有仓位了'
             self.state = '2'
             # 计算收益
             info = u.get_open_time_pnl_info(self.side, self.open_time)

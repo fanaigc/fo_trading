@@ -1,4 +1,5 @@
 import logging
+import time
 
 from odoo import api, fields, models, exceptions
 import ccxt
@@ -330,9 +331,16 @@ class TradingButton(models.Model):
         """
         self.state = '-1'
         self.name = self._default_name()
+
         # 删除所有的加仓记录
         for instance in self.trading_sub_ids:
             instance.unlink()
+
+        # 取消所有挂单
+        exchange = self.exchange_id.get_exchange()
+        o = exchange.order(self.symbol_id.name)
+        o.cancel_open_order(self.side)
+        o.cancel_close_order(self.side)
 
     def start(self):
         """
@@ -385,7 +393,8 @@ class TradingButton(models.Model):
             self.core_has_position(exchange)
 
         # 取消所有挂单
-        o.cancel_all_order()
+        o.cancel_open_order(self.side)
+        o.cancel_close_order(self.side)
 
         self.state = '2'
 
@@ -504,7 +513,12 @@ class TradingButton(models.Model):
 
         # 不存在则更新订单状态， 结束所有程序运行
         if not now_amount:
-            self.error_msg = '已经没有仓位了'
+            # 循环10次，防止出现仓位存在提前退出的情况
+            for i in range(10):
+                now_amount = u.get_position_amount(self.side)
+                if now_amount:
+                    return
+                time.sleep(1)
             self.state = '2'
             # 计算收益
             info = u.get_open_time_pnl_info(self.side, self.open_time)

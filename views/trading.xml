@@ -95,7 +95,8 @@
         <field name="arch" type="xml">
             <list string="fo_trading_trading_tree"
                   decoration-success="pnl_rate > 0"
-                  decoration-danger="0 >= pnl_rate >= -1">
+                  decoration-danger="0 >= pnl_rate >= -1"
+                    default_order="create_date desc">
 
                 <field name="name" readonly="1"/>
                 <field name="state"/>

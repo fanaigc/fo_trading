@@ -78,12 +78,12 @@ class User(BaseFunc):
             # 仓位亏损的金额
             max_loss = (avg_buy_price - stop_loss_price) * amount
             # 加上手续费
-            max_loss = max_loss + (stop_loss_price + avg_buy_price) * commission
+            max_loss = max_loss + (stop_loss_price + avg_buy_price) * commission * amount
         elif side == 'short':
             # 仓位亏损的金额
             max_loss = (stop_loss_price - avg_buy_price) * amount
             # 加上手续费
-            max_loss = max_loss + (stop_loss_price + avg_buy_price) * commission
+            max_loss = max_loss + (stop_loss_price + avg_buy_price) * commission * amount
         else:
             return False
         return max_loss
@@ -147,30 +147,29 @@ class User(BaseFunc):
 
         return float(position_infos[side]['value'])
 
-    def get_open_time_pnl_info(self, side, open_time):
+    def get_open_time_pnl_info(self, open_time):
         """
         获取指定开仓时间的pnl信息
-        :param side:
         :param open_time:
         :return:
         """
-        for i in range(10):
-            history_list = self.exchange.fetchPositionsHistory([self.symbol], params={'side': side})
-            for history in history_list:
-                info = history['info']
-                if open_time == info['first_open_time']:
-                    return {
-                        "pnl": info['pnl'],
-                        "pnl_pnl": info['pnl_pnl'],
-                        "pnl_fee": info['pnl_fee'],
-                    }
-            time.sleep(1)
-
-        return {
+        data = {
             "pnl": 0,
             "pnl_pnl": 0,
             "pnl_fee": 0,
         }
+        history_list = self.exchange.fetch_position_history(self.symbol)
+        history_list = history_list[:10]
+
+        for history in history_list:
+            if str(history['timestamp']) == str(open_time):
+                info = history['info']
+                data['pnl'] = info['pnl']
+                data['pnl_pnl'] = info['pnl_fee']
+                data['pnl_fee'] = info['pnl_fee']
+                return data
+
+        return data
 
     def _get_binance_last_close_pnl(self, side):
         """

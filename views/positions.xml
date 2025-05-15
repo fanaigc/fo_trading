@@ -1,0 +1,120 @@
+<odoo>
+    <!--    监控程序-->
+    <record id="fo_trading_position_cron" model="ir.cron">
+        <field name="name">仓位监控</field>
+        <field name="model_id" ref="fo_trading.model_fo_trading_positions"/>
+        <field name="state">code</field>
+        <field name="code">model.update_positions()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="nextcall" eval="(DateTime.now().replace(second=1))"/>
+    </record>
+
+    <record id="fo_trading_positions_view_form" model="ir.ui.view">
+        <field name="name">fo_trading_positions_view_form</field>
+        <field name="model">fo.trading.positions</field>
+        <field name="arch" type="xml">
+            <form string="fo_trading_positions_form" create="0" >
+                <header>
+                    <button name="test" type="object" string="测试"/>
+                    <button name="compute_best_atr" type="object" string="计算最大收益ATR"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name" readonly="1"/>
+                        <field name="symbol_id" readonly="1"/>
+                        <field name="timeframe"/>
+                        <field name="state" readonly="1"/>
+                        <field name="side" readonly="1"/>
+                        <field name="value" readonly="1"/>
+                        <field name="amount" readonly="1"/>
+                        <field name="max_win" readonly="1"/>
+                        <field name="pnl" readonly="1"/>
+                        <field name="now_loss" readonly="1"/>
+                        <field name="max_loss" readonly="1"/>
+                        <field name="pnl_rate" readonly="1"/>
+                        <field name="max_win_rate" readonly="1"/>
+                        <field name="entry_price" readonly="1"/>
+                        <field name="stop_loss_price" readonly="1"/>
+                        <field name="write_date" widget="daterange" string="更新时间"/>
+                        <field name="last_execute_time" readonly="1"/>
+                        <field name="next_execute_time" readonly="1"/>
+                    </group>
+
+                    <notebook>
+                        <page string="开单记录">
+                            <field name="trading_order_ids">
+                                <list>
+                                    <field name="order_type"/>
+                                    <field name="side"/>
+                                    <field name="state"/>
+                                    <field name="price"/>
+                                    <field name="execute_price"/>
+                                    <field name="stop_win_price"/>
+                                    <field name="stop_loss_price"/>
+                                    <field name="amount"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+
+            </form>
+        </field>
+    </record>
+
+    <record id="fo_trading_positions_view_tree" model="ir.ui.view">
+        <field name="name">fo_trading_positions_view_tree</field>
+        <field name="model">fo.trading.positions</field>
+        <field name="arch" type="xml">
+            <list string="fo_trading_positions_tree" create="0">
+                <field name="name"/>
+                <field name="symbol_id"/>
+                <field name="timeframe"/>
+                <field name="state"/>
+                <field name="side" width="30px"/>
+                <field name="value"/>
+                <field name="max_win"/>
+                <field name="pnl"/>
+                <field name="now_loss"/>
+                <field name="max_loss"/>
+                <field name="entry_price"/>
+                <field name="pnl_rate"/>
+                <field name="max_win_rate"/>
+                <field name="stop_loss_price"/>
+                <field name="write_date" widget="daterange" string="更新时间"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="fo_trading_positions_view_search" model="ir.ui.view">
+        <field name="name">仓位搜索</field>
+        <field name="model">fo.trading.positions</field>
+        <field name="arch" type="xml">
+            <search string="">
+                <filter name="state_default" string="持仓中" domain="[('state','=', '1')]"/>
+                <filter name="state_0" string="待买入" domain="[('state','=', '0')]"/>
+                <filter name="state_0" string="已完成" domain="[('state','=', '2')]"/>
+
+
+            </search>
+        </field>
+    </record>
+
+    <record id="fo_trading_positions_action" model="ir.actions.act_window">
+        <field name="name">仓位管理</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">fo.trading.positions</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{"search_default_state_default": 1}</field>
+
+    </record>
+
+
+    <menuitem id="fo_trading_menu_mail_servers" parent="fo_trading.fo_trading_menu_root"
+              action="fo_trading_positions_action"
+              sequence="7"/>
+
+</odoo>

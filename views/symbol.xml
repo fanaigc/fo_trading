@@ -1,4 +1,21 @@
 <odoo>
+    <record id="fo_trading_symbol_view_form" model="ir.ui.view">
+        <field name="name">fo_trading_symbol_view_form</field>
+        <field name="model">fo.trading.symbol</field>
+        <field name="arch" type="xml">
+            <form string="fo_trading_symbol_form">
+                <!-- <header>-->
+                <!--  <button name="start_monitor" type="object" string="测试监控"/>-->
+                <!-- </header>-->
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="monitor_ids"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
 
     <record id="fo_trading_symbol_view_tree" model="ir.ui.view">
         <field name="name">fo_trading_symbol_view_tree</field>
@@ -14,14 +31,29 @@
         <field name="name">币种管理</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">fo.trading.symbol</field>
-        <field name="view_mode">list</field>
+        <field name="view_mode">list,form</field>
     </record>
     <!-- This Menu Item will appear in the Upper bar, That's why It needs NO parent or action -->
     <menuitem id="fo_trading_menu_root" name="交易系统" sequence="1"/>
 
+    <!-- This Menu Item Must have a parent -->
+    <menuitem id="fo_trading_menu_setting_root" name="配置管理" parent="fo_trading_menu_root" sequence="99"/>
     <!-- This Menu Item must have a parent and an action -->
     <menuitem id="fo_trading_menu_symbol_action" name="币种管理"
-              parent="fo_trading_menu_root" action="fo_trading_symbol_action" sequence="99"/>
+              parent="fo_trading_menu_setting_root" action="fo_trading_symbol_action" sequence="98"/>
 
-    odo
+
+    <record model="ir.actions.act_window" id="fo_trading_action_ir_mail_server_list">
+        <field name="name">发件服务器配置</field>
+        <field name="res_model">ir.mail_server</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="base.ir_mail_server_list"/>
+        <field name="search_view_id" ref="base.view_ir_mail_server_search"/>
+    </record>
+
+    <menuitem id="fo_trading_menu_mail_servers" parent="fo_trading_menu_setting_root"
+              action="fo_trading_action_ir_mail_server_list"
+              groups="base.group_user"
+              sequence="99"/>
+
 </odoo>

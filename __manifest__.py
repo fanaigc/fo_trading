@@ -24,10 +24,21 @@ Long description of module's purpose
     'data': [
         'security/ir.model.access.csv',
 
+        # view
         'views/symbol.xml',
         'views/exchange.xml',
+        'views/condition.xml',
+        'views/monitor.xml',
+        'views/notification.xml',
+        'views/positions.xml',
         'views/trading.xml',
-        'views/strategy_trading.xml'
+        
+        # data
+        'data/symbol.xml',
+        'data/exchange.xml',
+        'data/condition_func.xml',
+        'data/condition_ta_lib.xml'
+
     ],
     # only loaded in demonstration mode
     'demo': [

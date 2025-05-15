@@ -1,0 +1,67 @@
+<odoo>
+    <!--    监控程序-->
+    <record id="fo_trading_strategy_trading_cron" model="ir.cron">
+        <field name="name">策略交易自动脚本</field>
+        <field name="model_id" ref="fo_trading.model_fo_trading_strategy_trading"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_run()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="nextcall" eval="(DateTime.now().replace(second=1))" />
+    </record>
+
+
+    <record id="fo_trading_strategy_trading_view_form" model="ir.ui.view">
+        <field name="name">fo_trading_strategy_trading_view_form</field>
+        <field name="model">fo.trading.strategy.trading</field>
+        <field name="arch" type="xml">
+            <form string="fo_trading_strategy_trading_form">
+                <header>
+                    <button name="start" type="object" string="开始交易" invisible="state != '-1'"/>
+                    <button name="stop" type="object" string="停止交易" invisible="state != '1'"/>
+                    <field name="state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name" readonly="1"/>
+                        <field name="exchange_id"/>
+                        <field name="side"/>
+                        <field name="symbol_id"/>
+                        <field name="timeframe"/>
+                        <field name="strategy_type"/>
+                        <field name="max_loss"/>
+                        <field name="double_ema_fast_num"/>
+                        <field name="double_ema_slow_num"/>
+                        <field name="double_ema_stop_loss_max_k_num"/>
+                    </group>
+                    <notebook>
+                        <page string="订单列表">
+                            <field name="trading_ids">
+                                <list create="0" editable="bottom" edit="0" default_order="create_date desc">
+                                    <field name="name"/>
+                                    <field name="is_running"/>
+                                    <field name="entry_price"/>
+                                    <field name="create_date" string="创建时间"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+
+    <record id="fo_trading_strategy_trading_action" model="ir.actions.act_window">
+        <field name="name">策略交易</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">fo.trading.strategy.trading</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+        <!-- This Menu Item must have a parent and an action -->
+    <menuitem id="fo_trading_menu_strategy_trading_action" name="策略交易"
+              parent="fo_trading_menu_root" action="fo_trading_strategy_trading_action" sequence="2"/>
+
+</odoo>

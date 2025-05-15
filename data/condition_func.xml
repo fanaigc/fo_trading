@@ -1,0 +1,85 @@
+<odoo>
+    <data>
+        <record id="get_max_value" model="fo.trading.condition">
+            <field name="name">前N根K线最大值</field>
+            <field name="args">15m|2|20|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_max_price</field>
+            <field name="is_enable">True</field>
+            <field name="remark">计算前N根所有的K线找到K线的最大值</field>
+        </record>
+
+        <record id="get_min_value" model="fo.trading.condition">
+            <field name="name">前N根K线最小值</field>
+            <field name="args">15m|2|20|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_min_price</field>
+            <field name="is_enable">True</field>
+            <field name="remark">计算前N根所有的K线找到K线的最小值</field>
+        </record>
+
+        <record id="get_close" model="fo.trading.condition">
+            <field name="name">收盘价</field>
+            <field name="args">15m|2|close|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_k_value</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取指定K线的收盘价（close）</field>
+        </record>
+
+        <record id="get_open" model="fo.trading.condition">
+            <field name="name">开盘价</field>
+            <field name="args">15m|2|open|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_k_value</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取指定K线的开盘价（open）</field>
+        </record>
+
+        <record id="get_high" model="fo.trading.condition">
+            <field name="name">最高价</field>
+            <field name="args">15m|2|high|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_k_value</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取指定K线的最高价（high）</field>
+        </record>
+
+        <record id="get_low" model="fo.trading.condition">
+            <field name="name">最低价</field>
+            <field name="args">15m|2|low|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_k_value</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取指定K线的最低价（low）</field>
+        </record>
+
+        <record id="get_volume" model="fo.trading.condition">
+            <field name="name">成交量</field>
+            <field name="args">15m|2|volume|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_k_value</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取指定K线的成交量（volume）</field>
+        </record>
+
+        <record id="get_target_price" model="fo.trading.condition">
+            <field name="name">目标价格</field>
+            <field name="args">15m|2|100|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_target_price</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取指定的目标价格</field>
+        </record>
+
+        <record id="get_now_price" model="fo.trading.condition">
+            <field name="name">获取最新价格</field>
+            <field name="args">15m|2|now|1</field>
+            <field name="load_mode">1</field>
+            <field name="load_func">get_now_price</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取当前最新成交价格</field>
+        </record>
+
+    </data>
+</odoo>

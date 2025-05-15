@@ -644,6 +644,14 @@ class Order(BaseFunc):
                 order_infos.append(order_info)
         return order_infos
 
+    def cancel_order_for_id(self, order_id):
+        """
+        根据order_id
+        :param order_id:
+        :return:
+        """
+        return self.exchange.cancel_order(id=order_id, symbol=self.symbol)
+
     def cancel_open_order(self, side, price=None, log=False):
         """
         取消开仓的订单
@@ -1000,6 +1008,60 @@ class Order(BaseFunc):
     #         'stop': True,
     #         'status': 'open'
     #     })
+
+    def update_order_price_for_id(self, order_id, price, order_side=None, order_type=None):
+        """
+        更新order_id的数据
+        1. 获取order_id的数据
+        2. 解析出必须参数type、side
+        3. edit_order编辑订单
+        :param order_type:
+        :param order_side:
+        :param order_id:
+        :param price:
+        :return:
+        """
+        # 1. 获取order_id的数据
+        if not all([order_side, order_type]):
+            order_info = self.get_order_id_info(order_id)
+            if not order_info:
+                return False
+
+            # 2. 解析出必须参数type、side
+            order_type = order_info['type']
+            order_side = order_info['side']
+        order_info = self.exchange.edit_order(order_id, self.symbol, order_type, order_side, price=price)
+        return order_info
+
+    def update_order_info_for_id(self, order_id, price, amount):
+        """
+        更新指定order_id的挂单数据
+        1. 获取order_id的数据
+        2. 解析出必须参数type、side
+        3. edit_order编辑订单
+        :param order_id:
+        :param price:
+        :param amount:
+        :return:
+        """
+        # 获取order_info的数据
+        order_info = self.get_order_id_info(order_id)
+        if not order_info:
+            return False
+
+        source_price = order_info['price']
+        source_amount = order_info['amount']
+        order_type = order_info['type']
+        order_side = order_info['side']
+        if source_price == price and source_amount == amount:
+            # 没有变化，不需要修改订单
+            return False
+            # 2. 解析出必须参数type、side
+        # 重新解析一下amount
+        amount = self._covert_amount(amount)
+        order_info = self.exchange.edit_order(order_id, self.symbol, order_type, order_side, price=price, amount=amount)
+        return order_info
+
 
     def test(self):
         logging.info(123)

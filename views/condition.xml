@@ -1,0 +1,32 @@
+<odoo>
+
+    <record id="fo_trading_condition_view_tree" model="ir.ui.view">
+        <field name="name">fo_trading_condition_view_tree</field>
+        <field name="model">fo.trading.condition</field>
+        <field name="arch" type="xml">
+            <list string="fo_trading_condition_tree" editable="bottom">
+                <field name="name"/>
+                <field name="load_mode"/>
+                <field name="load_func"/>
+<!--                <field name="res_series_name"/>-->
+                <field name="args" width="150px" />
+<!--                <field name="timeframe"/>-->
+
+<!--                <field name="res_series_num"/>-->
+                <field name="is_enable" width="20px" widget="boolean" readonly="1"/>
+                <field name="remark" width="100px"/>
+                <button name="enable" type="object" string="测试条件"/>
+            </list>
+        </field>
+    </record>
+    <record id="fo_trading_condition_action" model="ir.actions.act_window">
+        <field name="name">条件管理</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">fo.trading.condition</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="fo_trading_condition_menu" name="条件管理"
+              parent="fo_trading.fo_trading_menu_setting_root"
+              action="fo_trading_condition_action" sequence="1"/>
+</odoo>

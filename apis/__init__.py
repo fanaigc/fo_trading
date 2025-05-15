@@ -77,6 +77,14 @@ class CcxtApis(object):
         """
         return Compute(symbol=symbol, exchange=self.exchange, *args, **kwargs)
 
+    def compute2(self, *args, **kwargs):
+        """
+        计算方法，不需要symbol独立存在的
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        return Compute(exchange=self.exchange, *args, **kwargs)
 
 if __name__ == '__main__':
     CcxtApis()

@@ -7,8 +7,7 @@
                 <header>
                     <button name="set_default"  class="oe_highlight" type="object" string="设为默认交易所"/>
                     <button name="test_exchange" type="object" string="测试连接"/>
-                    <button name="get_markets" type="object" string="测试"/>
-
+                    <button name="test" type="object" string="测试"/>
                 </header>
                 <sheet>
                     <group>
@@ -16,10 +15,10 @@
                         <field name="exchange_type"/>
                         <field name="api_key"/>
                         <field name="api_secret"/>
-                        <field name="open_max_loss_rate" />
-                        <field name="add_max_loss_rate" />
+                        <field name="timeframe"/>
+                        <field name="max_loss_rate_for_every"/>
+                        <field name="max_loss_rate_for_position"/>
                         <field name="is_default" readonly="1" widget="boolean_toggle" />
-
                     </group>
                 </sheet>
             </form>
@@ -50,6 +49,6 @@
 
 
     <menuitem id="fo_trading_exchange_menu" name="交易所管理"
-              parent="fo_trading.fo_trading_menu_root"
-              action="fo_trading_exchange_action" sequence="999"/>
+              parent="fo_trading.fo_trading_menu_setting_root"
+              action="fo_trading_exchange_action" sequence="98"/>
 </odoo>

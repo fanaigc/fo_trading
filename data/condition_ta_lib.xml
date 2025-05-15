@@ -1,0 +1,30 @@
+<odoo>
+    <data>
+        <record id="get_ema" model="fo.trading.condition">
+            <field name="name">EMA</field>
+            <field name="args">15m|2|20|1</field>
+            <field name="load_mode">2</field>
+            <field name="load_func">EMA</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取指定周期（20）的EMA指标值</field>
+        </record>
+
+        <record id="get_ema_volume" model="fo.trading.condition">
+            <field name="name">EMA_VOLUME</field>
+            <field name="args">15m|2|volume,20|1</field>
+            <field name="load_mode">2</field>
+            <field name="load_func">EMA</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取成交量的EMA指标值（周期20）</field>
+        </record>
+
+        <record id="get_rsi" model="fo.trading.condition">
+            <field name="name">RSI</field>
+            <field name="args">15m|2|14|1</field>
+            <field name="load_mode">2</field>
+            <field name="load_func">RSI</field>
+            <field name="is_enable">True</field>
+            <field name="remark">获取指定周期（14）的RSI指标值</field>
+        </record>
+    </data>
+</odoo>

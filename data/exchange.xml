@@ -1,0 +1,18 @@
+<odoo>
+    <data noupdate="1">
+        <record id="gate_exchange" model="fo.trading.exchange">
+            <field name="name">Gate</field>
+            <field name="exchange_type">gate</field>
+            <field name="api_key">5a6681b2d085c074c56d41b3e6dfc1d7</field>
+            <field name="api_secret">xxx</field>
+        </record>
+
+         <record id="binance_exchange" model="fo.trading.exchange">
+            <field name="name">binance</field>
+            <field name="exchange_type">binance</field>
+            <field name="api_key">5a6681b2d085c074c56d41b3e6dfc1d7</field>
+            <field name="api_secret">xxx</field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,6 +1,7 @@
 from .base import BaseFunc
 import talib
 import pandas as pd
+from .market import Market
 
 
 class KData(BaseFunc):
@@ -10,6 +11,7 @@ class KData(BaseFunc):
         :param exchange:
         """
         super(KData, self).__init__(symbol, exchange, *args, **kwargs)
+        self.m = Market(symbol=symbol, exchange=self.exchange, *args, **kwargs)
         self.df_1m = []
         self.df_5m = []
         self.df_15m = []
@@ -193,6 +195,19 @@ class KData(BaseFunc):
         :return:
         """
         df = self._filter_kdata_price_for_ohlcv(k_time, ref, 1, 'low')
+        if type(df) is bool:
+            return False
+
+        return df.iloc[0]
+
+    def get_volume(self, k_time, ref=0):
+        """
+        获取成交量
+        :param k_time:
+        :param ref:
+        :return:
+        """
+        df = self._filter_kdata_price_for_ohlcv(k_time, ref, 1, 'volume')
         if type(df) is bool:
             return False
 

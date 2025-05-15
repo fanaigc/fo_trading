@@ -1,0 +1,151 @@
+<odoo>
+    <data>
+        <record id="BTC_SWAP" model="fo.trading.symbol">
+            <field name="name">BTC/USDT:USDT</field>
+        </record>
+        <record id="ETH_SWAP" model="fo.trading.symbol">
+            <field name="name">ETH/USDT:USDT</field>
+        </record>
+        <record id="SOL_SWAP" model="fo.trading.symbol">
+            <field name="name">SOL/USDT:USDT</field>
+        </record>
+        <record id="XRP_SWAP" model="fo.trading.symbol">
+            <field name="name">XRP/USDT:USDT</field>
+        </record>
+        <record id="ADA_SWAP" model="fo.trading.symbol">
+            <field name="name">ADA/USDT:USDT</field>
+        </record>
+        <record id="DOGE_SWAP" model="fo.trading.symbol">
+            <field name="name">DOGE/USDT:USDT</field>
+        </record>
+        <record id="DOT_SWAP" model="fo.trading.symbol">
+            <field name="name">DOT/USDT:USDT</field>
+        </record>
+        <record id="AVAX_SWAP" model="fo.trading.symbol">
+            <field name="name">AVAX/USDT:USDT</field>
+        </record>
+        <record id="LINK_SWAP" model="fo.trading.symbol">
+            <field name="name">LINK/USDT:USDT</field>
+        </record>
+        <record id="MATIC_SWAP" model="fo.trading.symbol">
+            <field name="name">MATIC/USDT:USDT</field>
+        </record>
+        <record id="UNI_SWAP" model="fo.trading.symbol">
+            <field name="name">UNI/USDT:USDT</field>
+        </record>
+        <record id="ATOM_SWAP" model="fo.trading.symbol">
+            <field name="name">ATOM/USDT:USDT</field>
+        </record>
+        <record id="LTC_SWAP" model="fo.trading.symbol">
+            <field name="name">LTC/USDT:USDT</field>
+        </record>
+        <record id="BCH_SWAP" model="fo.trading.symbol">
+            <field name="name">BCH/USDT:USDT</field>
+        </record>
+        <record id="ETC_SWAP" model="fo.trading.symbol">
+            <field name="name">ETC/USDT:USDT</field>
+        </record>
+        <record id="FIL_SWAP" model="fo.trading.symbol">
+            <field name="name">FIL/USDT:USDT</field>
+        </record>
+        <record id="NEAR_SWAP" model="fo.trading.symbol">
+            <field name="name">NEAR/USDT:USDT</field>
+        </record>
+        <record id="ALGO_SWAP" model="fo.trading.symbol">
+            <field name="name">ALGO/USDT:USDT</field>
+        </record>
+        <record id="XLM_SWAP" model="fo.trading.symbol">
+            <field name="name">XLM/USDT:USDT</field>
+        </record>
+        <record id="VET_SWAP" model="fo.trading.symbol">
+            <field name="name">VET/USDT:USDT</field>
+        </record>
+        <record id="SAND_SWAP" model="fo.trading.symbol">
+            <field name="name">SAND/USDT:USDT</field>
+        </record>
+        <record id="MANA_SWAP" model="fo.trading.symbol">
+            <field name="name">MANA/USDT:USDT</field>
+        </record>
+        <record id="AXS_SWAP" model="fo.trading.symbol">
+            <field name="name">AXS/USDT:USDT</field>
+        </record>
+        <record id="AAVE_SWAP" model="fo.trading.symbol">
+            <field name="name">AAVE/USDT:USDT</field>
+        </record>
+        <record id="EGLD_SWAP" model="fo.trading.symbol">
+            <field name="name">EGLD/USDT:USDT</field>
+        </record>
+        <record id="THETA_SWAP" model="fo.trading.symbol">
+            <field name="name">THETA/USDT:USDT</field>
+        </record>
+        <record id="XTZ_SWAP" model="fo.trading.symbol">
+            <field name="name">XTZ/USDT:USDT</field>
+        </record>
+        <record id="APE_SWAP" model="fo.trading.symbol">
+            <field name="name">APE/USDT:USDT</field>
+        </record>
+        <record id="SHIB_SWAP" model="fo.trading.symbol">
+            <field name="name">SHIB/USDT:USDT</field>
+        </record>
+        <record id="OP_SWAP" model="fo.trading.symbol">
+            <field name="name">OP/USDT:USDT</field>
+        </record>
+        <record id="ARB_SWAP" model="fo.trading.symbol">
+            <field name="name">ARB/USDT:USDT</field>
+        </record>
+        <record id="SUI_SWAP" model="fo.trading.symbol">
+            <field name="name">SUI/USDT:USDT</field>
+        </record>
+        <record id="TON_SWAP" model="fo.trading.symbol">
+            <field name="name">TON/USDT:USDT</field>
+        </record>
+        <record id="WIF_SWAP" model="fo.trading.symbol">
+            <field name="name">WIF/USDT:USDT</field>
+        </record>
+        <record id="XMR_SWAP" model="fo.trading.symbol">
+            <field name="name">XMR/USDT:USDT</field>
+        </record>
+        <record id="PEPE_SWAP" model="fo.trading.symbol">
+            <field name="name">PEPE/USDT:USDT</field>
+        </record>
+        <record id="BONK_SWAP" model="fo.trading.symbol">
+            <field name="name">BONK/USDT:USDT</field>
+        </record>
+        <record id="FLOW_SWAP" model="fo.trading.symbol">
+            <field name="name">FLOW/USDT:USDT</field>
+        </record>
+        <record id="ENJ_SWAP" model="fo.trading.symbol">
+            <field name="name">ENJ/USDT:USDT</field>
+        </record>
+        <record id="GALA_SWAP" model="fo.trading.symbol">
+            <field name="name">GALA/USDT:USDT</field>
+        </record>
+        <record id="CHIL_SWAP" model="fo.trading.symbol">
+            <field name="name">CHIL/USDT:USDT</field>
+        </record>
+        <record id="JASMY_SWAP" model="fo.trading.symbol">
+            <field name="name">JASMY/USDT:USDT</field>
+        </record>
+        <record id="CFX_SWAP" model="fo.trading.symbol">
+            <field name="name">CFX/USDT:USDT</field>
+        </record>
+        <record id="IMX_SWAP" model="fo.trading.symbol">
+            <field name="name">IMX/USDT:USDT</field>
+        </record>
+        <record id="KLAY_SWAP" model="fo.trading.symbol">
+            <field name="name">KLAY/USDT:USDT</field>
+        </record>
+        <record id="KAS_SWAP" model="fo.trading.symbol">
+            <field name="name">KAS/USDT:USDT</field>
+        </record>
+        <record id="GRT_SWAP" model="fo.trading.symbol">
+            <field name="name">GRT/USDT:USDT</field>
+        </record>
+        <record id="RNDR_SWAP" model="fo.trading.symbol">
+            <field name="name">RNDR/USDT:USDT</field>
+        </record>
+        <record id="FTM_SWAP" model="fo.trading.symbol">
+            <field name="name">FTM/USDT:USDT</field>
+        </record>
+    </data>
+</odoo>

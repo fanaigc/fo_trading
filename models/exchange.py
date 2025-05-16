@@ -57,7 +57,7 @@ class Exchange(models.Model):
         # 2.2 计算已经使用的所有余额
         use_balance = self.env['fo.trading.positions'].get_all_position_max_loss()
         # 2.3 计算当前可以使用的余额
-        can_use_balance = balance - use_balance
+        can_use_balance = balance + use_balance
         # 2.4 判断当前是否存在symbol的仓位
         position_instance = self.env['fo.trading.positions'].search(
             [('state', '=', '1'), ('symbol_id.name', '=', symbol)])

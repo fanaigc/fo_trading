@@ -150,12 +150,13 @@ class Compute(BaseFunc):
         return datetime.now() + timedelta(hours=8)
 
     @staticmethod
-    def compute_stop_loss_price(side, kd, timeframe="1m"):
+    def compute_stop_loss_price(side, kd, entry_price=None, timeframe="1m"):
         """
         获取止损价格
 
         :param side: 交易方向，'long' 或 'short'
         :param kd: K线数据对象
+        :param entry_price: 入场价格
         :param timeframe: 时间框架，例如 '15m', '1h', '4h'
         :return:
         """
@@ -173,36 +174,49 @@ class Compute(BaseFunc):
         elif timeframe == '15m':
             timeframe = '5m'
         elif timeframe == '5m':
+            timeframe = '3m'
+        elif timeframe == '3m':
             timeframe = '1m'
 
         if len(getattr(kd, 'df_{}'.format(timeframe))) < 100:
             kd.update_kdata(timeframe, 100)
 
-        # 2.1 计算20根K线最大最小值
+        # 加载参数
+        atr = kd.get_atr(timeframe, 14)
+        if not entry_price:
+            entry_price = kd.m.get_now_price()
+
+        # 计算出价格A - 最大最小值和ATR的值
         max_price_close = kd.get_kdata_max_price(timeframe, 0, 96, "close")
         max_price_high = kd.get_kdata_max_price(timeframe, 0, 96, "high")
         min_price_close = kd.get_kdata_min_price(timeframe, 0, 96, "close")
         min_price_low = kd.get_kdata_min_price(timeframe, 0, 96, "low")
         max_price_close_2 = kd.get_kdata_max_price(timeframe, 0, 20, "close")
         min_price_close_2 = kd.get_kdata_min_price(timeframe, 0, 20, "close")
-        # 2.2 计算当前ATR值
-        atr = kd.get_atr(timeframe, 14)
-        # 2.2.1 - 计算atr的倍数，如果最近几个值就是最大最小值，那么就需要将ATR的倍数变大一些
-        atr_rate = 1.5
+        atr_rate = 1.6
         if side == 'long' and min_price_close == min_price_close_2:
-            atr_rate = 2.5
+            atr_rate = 4.6
         elif side == 'short' and max_price_close == max_price_close_2:
-            atr_rate = 2.5
-
-        # 2.3 计算当前k线止损点位
-        stop_loss_price = 0
+            atr_rate = 4.6
         atr_value = atr * atr_rate
         if side == 'long':
-            stop_loss_price = (min_price_close + min_price_low) / 2 - atr_value
-        elif side == 'short':
-            stop_loss_price = (max_price_close + max_price_high) / 2 + atr_value
+            stop_loss_price_a = (min_price_close + min_price_low) / 2 - atr_value
+        else:
+            stop_loss_price_a = (max_price_close + max_price_high) / 2 + atr_value
 
-        return float(stop_loss_price)
+        # 计算止损价格B - ATR5.9倍止损点位
+        if side == 'long':
+            stop_loss_price_b = entry_price - 6.8 * atr
+        else:
+            stop_loss_price_b = entry_price + 6.8 * atr
+
+        # 如果是多头，取更大的值，如果是空头，取更小的值
+        if side == 'long':
+            stop_loss_price = max(stop_loss_price_a, stop_loss_price_b)
+        else:
+            stop_loss_price = min(stop_loss_price_a, stop_loss_price_b)
+
+        return stop_loss_price
 
     @staticmethod
     def update_execute_stop_price(side, price_data, execute_price=None, stop_loss_price=None, stop_win_price=None):
@@ -279,7 +293,7 @@ class Compute(BaseFunc):
 
         # 计算止损
         stop_loss_price = 0
-        stop_loss_price_1 = self.compute_stop_loss_price(side, kd, timeframe)
+        stop_loss_price_1 = self.compute_stop_loss_price(side, kd, timeframe=timeframe)
         atr = kd.get_atr(timeframe)
         if execute_price > 0 and side == 'long':
             # 止损价格 = 执行价格 * (1 + 盈亏比) - 止盈价格 / 盈亏比

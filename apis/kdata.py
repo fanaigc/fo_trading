@@ -13,6 +13,7 @@ class KData(BaseFunc):
         super(KData, self).__init__(symbol, exchange, *args, **kwargs)
         self.m = Market(symbol=symbol, exchange=self.exchange, *args, **kwargs)
         self.df_1m = []
+        self.df_3m = []
         self.df_5m = []
         self.df_15m = []
         self.df_30m = []

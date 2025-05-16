@@ -85,7 +85,7 @@
     </record>
 
 
-    <menuitem id="fo_trading_trading_menu" name="交易指令"
+    <menuitem id="fo_trading_trading_menu" name="交易指令(待完善)"
               parent="fo_trading.fo_trading_menu_root"
               action="fo_trading_trading_action" sequence="7"/>
 </odoo>

@@ -46,6 +46,7 @@ class Positions(models.Model):
     max_win_rate = fields.Float("最大盈亏比", digits=(16, 3), default=0.0, store=True)
 
     is_stop_win_1 = fields.Boolean("已经第一次止盈", default=False)
+    is_add_position_1 = fields.Boolean("已经第一次加仓", default=False)
 
     pnl_rate = fields.Float("盈亏比", digits=(16, 3), default=0.0, compute="_compute_pnl_rate", store=True)
     symbol_id = fields.Many2one("fo.trading.symbol", "币种")
@@ -257,7 +258,7 @@ class Positions(models.Model):
         all_max_loss = 0
         instances = self.search([('state', '=', '1')])
         for instance in instances:
-            all_max_loss += instance.max_loss
+            all_max_loss += instance.now_loss
 
         return all_max_loss
 
@@ -405,6 +406,7 @@ class Positions(models.Model):
         :return:
         """
         o = exchange.order(self.symbol_id.name)
+        c = exchange.compute(self.symbol_id.name)
         # 先执行订单流交易
         # if self.trading_order_ids:
         #     self.run_trading_order(exchange)
@@ -428,6 +430,26 @@ class Positions(models.Model):
         # 进行止损止盈的赋值
         self.last_stop_loss_price = self.stop_loss_price
         self.last_stop_win_price = self.stop_win_price
+
+        # 进行第一次加仓的操作
+        if not self.is_add_position_1 and self.amount > 0:
+            self.is_add_position_1 = True
+            exchange_instance = self.env['fo.trading.exchange'].search([('is_default', '=', True)], limit=1)
+            max_loss = exchange_instance.get_symbol_max_loss(symbol=self.symbol_id.name,
+                                                             exchange=exchange)
+            if not max_loss:
+                return 0
+            need_buy_amount = c.get_buy_amount_for_stop_price(self.side,
+                                                              self.stop_loss_price,
+                                                              max_loss,
+                                                              c.m.get_now_price())
+            # 没有需要加仓的单位
+            need_buy_amount = need_buy_amount - self.amount
+            if need_buy_amount <= 0:
+                return
+
+            # 执行加仓操作, 市价操作
+            o.open_order(self.side, need_buy_amount)
 
         # 进行动态止盈，目前4倍ATR收益最高
         if self.is_stop_win_1:
@@ -457,7 +479,7 @@ class Positions(models.Model):
         c = exchange.compute(self.symbol_id.name)
         kd = exchange.kdata(self.symbol_id.name)
 
-        stop_loss_price = c.compute_stop_loss_price(self.side, kd, self.timeframe)
+        stop_loss_price = c.compute_stop_loss_price(self.side, kd, timeframe=self.timeframe)
         # 2.4 获取当前市场的止损点位,根据当前市场的止损点位，重新进行计算止损价格
         now_stop_loss_price = o.get_stop_loss_price(self.side)
         if now_stop_loss_price and self.side == 'long':

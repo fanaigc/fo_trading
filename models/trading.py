@@ -931,16 +931,23 @@ class TradingOrders(models.Model):
         timeframe = position_instance.timeframe
         stop_loss_price = position_instance.stop_loss_price
         if not stop_loss_price:
+            if order_info['side'] == 'buy':
+                side = 'long'
+            else:
+                side = 'short'
+
             if len(getattr(kd, 'df_{}'.format(timeframe))) < 100:
                 kd.update_kdata(timeframe, 100)
-            #  计算当前ATR值
-            atr = kd.get_atr(timeframe, 14)
-            if order_info['side'] == 'buy':
-                position_instance.side = 'long'
-                stop_loss_price = price - atr * 5
-            else:
-                position_instance.side = 'short'
-                stop_loss_price = price + atr * 5
+
+            stop_loss_price = c.compute_stop_loss_price(side, kd, entry_price=price, timeframe=timeframe)
+            # #  计算当前ATR值
+            # atr = kd.get_atr(timeframe, 14)
+            # if order_info['side'] == 'buy':
+            #     position_instance.side = 'long'
+            #     stop_loss_price = price - atr * 5
+            # else:
+            #     position_instance.side = 'short'
+            #     stop_loss_price = price + atr * 5
 
         # 计算amount
         max_loss = exchange_instance.get_symbol_max_loss(symbol=symbol_name, exchange=exchange)
@@ -1122,7 +1129,10 @@ class TradingOrders(models.Model):
         o = exchange.order(symbol_name)
         order_info = o.get_order_id_info(self.order_uid)
         if not order_info:
-            raise exceptions.ValidationError("获取订单信息失败，订单号：{}".format(self.order_uid))
+            self.state = 'canceled'
+            logging.error("获取订单信息失败，订单号：{}".format(self.order_uid))
+            return
+            # raise exceptions.ValidationError("获取订单信息失败，订单号：{}".format(self.order_uid))
 
         if order_info['status'] == 'reduce_out':
             order_info['status'] = 'canceled'

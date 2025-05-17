@@ -959,7 +959,10 @@ class TradingOrders(models.Model):
                                                           max_loss,
                                                           price)
         if not need_buy_amount:
-            o.cancel_order_for_id(order_uid)
+            # todo
+            # o.cancel_order_for_id(order_uid)
+            logging.warning("{}-{} - 计算出需要买入的amount为0".format(symbol_name, order_uid))
+            return 0, 0
 
         # 修改订单的内容
         o.update_order_info_for_id(order_uid, price=price, amount=need_buy_amount)
@@ -995,6 +998,8 @@ class TradingOrders(models.Model):
                 # 如果没有instance对象则通过price的价格计算一个新的止损价格，重新挂单
                 stop_loss_price, need_buy_amount, = self.update_stop_loss_price(exchange, order_info,
                                                                                 position_instance)
+                if not stop_loss_price:
+                    return
 
                 # 创建instance
                 self.create({
@@ -1023,6 +1028,8 @@ class TradingOrders(models.Model):
                 position_instance.last_execute_time = fields.Datetime.now()
                 stop_loss_price, need_buy_amount, = self.update_stop_loss_price(exchange, order_info,
                                                                                 position_instance)
+                if not stop_loss_price:
+                    return
                 instance.update({
                     "stop_loss_price": stop_loss_price,
                     "amount": need_buy_amount,

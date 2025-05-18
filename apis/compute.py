@@ -160,6 +160,9 @@ class Compute(BaseFunc):
         :param timeframe: 时间框架，例如 '15m', '1h', '4h'
         :return:
         """
+        if len(getattr(kd, 'df_{}'.format(timeframe))) < 100:
+            kd.update_kdata(timeframe, 100)
+
         # 将timeframe降级在提高数量，防止插针数据
         if timeframe == '1w':
             timeframe = '1d'
@@ -177,9 +180,6 @@ class Compute(BaseFunc):
             timeframe = '3m'
         elif timeframe == '3m':
             timeframe = '1m'
-
-        if len(getattr(kd, 'df_{}'.format(timeframe))) < 100:
-            kd.update_kdata(timeframe, 100)
 
         # 加载参数
         atr = kd.get_atr(timeframe, 14)
@@ -200,21 +200,15 @@ class Compute(BaseFunc):
             atr_rate = 4.6
         atr_value = atr * atr_rate
         if side == 'long':
-            stop_loss_price_a = (min_price_close + min_price_low) / 2 - atr_value
+            stop_loss_price = (min_price_close + min_price_low) / 2 - atr_value
         else:
-            stop_loss_price_a = (max_price_close + max_price_high) / 2 + atr_value
+            stop_loss_price = (max_price_close + max_price_high) / 2 + atr_value
 
-        # 计算止损价格B - ATR5.9倍止损点位
-        if side == 'long':
-            stop_loss_price_b = entry_price - 6.8 * atr
-        else:
-            stop_loss_price_b = entry_price + 6.8 * atr
-
-        # 如果是多头，取更大的值，如果是空头，取更小的值
-        if side == 'long':
-            stop_loss_price = max(stop_loss_price_a, stop_loss_price_b)
-        else:
-            stop_loss_price = min(stop_loss_price_a, stop_loss_price_b)
+        # 已经止损的价格已经与执行价格有2.6的ATR差距，则不需要再计算, 否则可能并没有开仓则使用6.8ATR来进行计算
+        if side == 'long' and entry_price - stop_loss_price < 2.6 * atr:
+            stop_loss_price = entry_price - 6.8 * atr
+        elif side == 'short' and stop_loss_price - entry_price < 2.6 * atr:
+            stop_loss_price = entry_price + 6.8 * atr
 
         return stop_loss_price
 

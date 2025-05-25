@@ -262,7 +262,6 @@ class KData(BaseFunc):
             return sma.iloc[-ref - 1]
         return sma
 
-
     def get_atr(self, k_time, limit=14, ref=0):
         """
         获取ATR的值

@@ -7,3 +7,4 @@ from . import monitor
 from . import notification
 from . import positions
 from . import trading
+from . import grid_trading

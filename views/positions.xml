@@ -113,8 +113,8 @@
     </record>
 
 
-    <menuitem id="fo_trading_menu_mail_servers" parent="fo_trading.fo_trading_menu_root"
+    <menuitem id="fo_trading_positions_menu" parent="fo_trading.fo_trading_menu_root"
               action="fo_trading_positions_action"
-              sequence="7"/>
+              sequence="5"/>
 
 </odoo>

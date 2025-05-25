@@ -1,0 +1,76 @@
+<odoo>
+    <record id="fo_trading_grid_trading_cron" model="ir.cron">
+        <field name="name">网格自动运行</field>
+        <field name="model_id" ref="fo_trading.model_fo_trading_grid_trading"/>
+        <field name="state">code</field>
+        <field name="code">model._cron()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="nextcall" eval="(DateTime.now().replace(second=1))" />
+    </record>
+
+    <record id="fo_trading_grid_trading_view_form" model="ir.ui.view">
+        <field name="name">fo_trading_grid_trading_view_form</field>
+        <field name="model">fo.trading.grid.trading</field>
+        <field name="arch" type="xml">
+            <form string="fo_trading_grid_trading_form">
+                <header>
+                    <button name="start" type="object" string="开始"/>
+                    <button name="stop" type="object" string="停止"/>
+                    <field name="state" widget="statusbar" />
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name" readonly="1"/>
+                        <field name="exchange_id"/>
+                        <field name="symbol_id"/>
+                        <field name="timeframe"/>
+                        <field name="max_loss"/>
+                        <field name="grid_num"/>
+                        <field name="atr_rate"/>
+                        <field name="now_long_profit"/>
+                        <field name="now_short_profit"/>
+                        <field name="now_grid_positions" readonly="1"/>
+                        <field name="last_execute_time" readonly="1"/>
+                        <field name="next_execute_time" readonly="1"/>
+                        <field name="now_a" readonly="1"/>
+                        <field name="now_b" readonly="1"/>
+                    </group>
+
+
+                </sheet>
+
+            </form>
+        </field>
+    </record>
+
+    <record id="fo_trading_grid_trading_view_tree" model="ir.ui.view">
+        <field name="name">fo_trading_grid_trading_view_tree</field>
+        <field name="model">fo.trading.grid.trading</field>
+        <field name="arch" type="xml">
+            <list string="fo_trading_grid_trading_tree">
+                <field name="name" readonly="1"/>
+                <field name="symbol_id"/>
+                <field name="timeframe"/>
+                <field name="max_loss"/>
+                <field name="now_long_profit"/>
+                <field name="now_short_profit"/>
+                <field name="write_date" widget="daterange" string="更新时间"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="fo_trading_grid_trading_action" model="ir.actions.act_window">
+        <field name="name">自动网格策略</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">fo.trading.grid.trading</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+
+    <menuitem id="fo_trading_grid_trading_menu" parent="fo_trading.fo_trading_menu_root"
+              action="fo_trading_grid_trading_action"
+              sequence="6"/>
+
+</odoo>

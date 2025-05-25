@@ -32,6 +32,7 @@ Long description of module's purpose
         'views/notification.xml',
         'views/positions.xml',
         'views/trading.xml',
+        'views/grid_trading.xml',
         
         # data
         'data/symbol.xml',

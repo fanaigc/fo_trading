@@ -285,6 +285,12 @@ class Positions(models.Model):
             # 3.1 加载position的数据
             position_data = self.parse_position(position)
 
+            # 检查一下是否在自动网格中已经有运行，如果有直接跳过
+            grid_instance = self.env['fo.trading.grid.trading'].search([('state', '=', '2'),
+                                                                        ('symbol_id', '=', position_data['symbol_id'])])
+            if grid_instance:
+                continue
+
             # 3.2 加载position_instance
             # 先加载待买入的position_instance
             position_instance = self.search([('symbol_id', '=', position_data['symbol_id']),
@@ -422,7 +428,7 @@ class Positions(models.Model):
         # 止盈挂单
         if not self.stop_win_price and self.last_stop_win_price:
             # 如果当前没有止盈价格，但是上次有止盈价格，取消所有止盈订单
-            o.cancel_close_order(self.side)
+            o.close_order(self.side)
         elif self.stop_win_price and self.last_stop_win_price != self.stop_win_price:
             # 如果当前有止盈价格，而且上次止盈价格和当前止盈价格不一样，更新止盈价格
             self.run_stop_win_order(exchange)

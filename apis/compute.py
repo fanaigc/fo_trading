@@ -213,6 +213,119 @@ class Compute(BaseFunc):
         return stop_loss_price
 
     @staticmethod
+    def compute_dc_grid_prices(a, b, grid_num):
+        """
+        计算出等差网格的价格
+        :param a: 网格的最大值
+        :param b: 网格的最小值
+        :param grid_num: 网格的数量
+        :return:
+        """
+        # 计算每个网格的价格区间
+        grid_interval = (a - b) / grid_num
+
+        # 计算网格价格列表
+        grid_prices = [a - i * grid_interval for i in range(grid_num + 1)]
+        return grid_prices
+
+    @staticmethod
+    def compute_db_grid_prices(a, b, grid_num):
+        """
+        计算出等比网格的价格
+        :param a: 网格的最大值
+        :param b: 网格的最小值
+        :param grid_num: 网格的数量
+        :return:
+        """
+        # 计算公比 r
+        r = (b / a) ** (1 / grid_num)
+
+        # 计算每一层网格的价格（等比数列）
+        grid_prices = [a * (r ** i) for i in range(grid_num + 1)]
+        return grid_prices
+
+    def compute_grid_positions(self, a, b, grid_num, max_loss):
+        """
+        计算出网格的仓位
+        :param a: 网格的最大值
+        :param b: 网格的最小值
+        :param grid_num: 网格的数量
+        :param max_loss: 最大亏损金额
+        :return:
+        """
+
+        # 计算网格价格列表
+        grid_prices = self.compute_db_grid_prices(a, b, grid_num)
+        # print(grid_prices)
+
+        # 计算每个网格买的份数 100x + 90x - 80*2x = max_loss
+        buy_value = sum(grid_prices[:-1])
+        sell_value = grid_prices[-1] * len(grid_prices[:-1])
+        grid_amount = max_loss / (buy_value - sell_value)
+        # print(grid_amount)
+
+        # 组合新的数据进行返回
+        grid_positions = []
+        i = 0
+        for price in grid_prices:
+            grid_positions.append({
+                'price': price,
+                'long_amount': 0 if i == grid_num else grid_amount * (i + 1),
+                'short_amount': 0 if i == 0 else grid_amount * (grid_num - i + 1),
+            })
+            i += 1
+        # print(grid_positions)
+        return grid_positions
+
+    @staticmethod
+    def get_now_grid_index(grid_positions, price):
+        """
+        获取当前网格的索引
+        :param grid_positions:
+        :param price:
+        :return:
+        """
+        for index in range(len(grid_positions)):
+            # print(grid_positions[index]['price'])
+            if price >= grid_positions[index]['price']:
+                return index
+        return 0
+
+    @staticmethod
+    def get_index_grid_need_buy(side, grid_positions, now_grid_index):
+        """
+        获取应该买入的amount
+        :param side:
+        :param grid_positions:
+        :param now_grid_index:
+        :return:
+        """
+        if side == 'long':
+            need_buy_info = grid_positions[now_grid_index]
+            need_buy_amount = need_buy_info['long_amount']
+        else:
+            need_buy_info = grid_positions[now_grid_index - 1]
+            need_buy_amount = need_buy_info['short_amount']
+        return need_buy_amount, need_buy_info['price']
+
+    @staticmethod
+    def get_index_grid_need_sell(side, grid_positions, now_grid_index):
+        """
+        获取应该买入的amount
+        :param side:
+        :param grid_positions:
+        :param now_grid_index:
+        :return:
+        """
+        if side == 'long':
+            need_buy_info = grid_positions[now_grid_index-1]
+            need_buy_amount = need_buy_info['long_amount']
+        else:
+            need_buy_info = grid_positions[now_grid_index]
+            need_buy_amount = need_buy_info['short_amount']
+        return need_buy_amount, need_buy_info['price']
+
+    @staticmethod
     def update_execute_stop_price(side, price_data, execute_price=None, stop_loss_price=None, stop_win_price=None):
         """
             更新执行止损止盈价格

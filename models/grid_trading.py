@@ -1,4 +1,7 @@
+import json
+
 from odoo import api, fields, models, exceptions
+from datetime import timedelta
 
 import pandas as pd
 import numpy as np
@@ -14,18 +17,42 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 
-class GridTrading(models.Model):
-    _name = 'fo.trading.grid.trading'
-    _description = "网格交易"
+def get_now_datetime():
+    """
+    获取当前的时间
+    """
+    return datetime.now() + timedelta(hours=8)
+    # return datetime.now()
 
-    name = fields.Char("网格名称")
-    exchange_id = fields.Many2one('fo.trading.exchange', string="交易所")
-    symbol = fields.Char("交易对")
-    grid_count = fields.Integer("网格数量", default=10)
-    grid_size = fields.Float("网格间距", default=0.01)
-    grid_price = fields.Float("网格价格", default=0.0)
-    grid_amount = fields.Float("网格数量", default=0.01)
-    grid_type = fields.Selection([('buy', '买入'), ('sell', '卖出')], string="网格类型", default='buy')
+
+# class GridTradingStrategy(object):
+#     """
+#     网格策略，主要用在震荡趋势中
+#     """
+#
+#     def __init__(self, exchange):
+#         """
+#         初始化项目参数
+#         :param exchange:
+#         """
+#         # 加载变量的传入值
+#         self.exchange = exchange
+#         self.symbol_name = exchange.symbol_name
+#         self.timeframe = exchange.timeframe
+#         self.max_loss = exchange.max_loss
+#         if not all([self.symbol_name, self.timeframe, self.max_loss]):
+#             raise exceptions.ValidationError("网格策略参数不完整，请检查交易对、周期和最大亏损金额是否设置")
+#         # 静态策略参数，不需要进行配置
+#         self.ema_len = 21
+#         self.grid_num = 6
+#         self.atr_rate = 2.2
+#
+#     def run(self):
+#         """
+#         核心运行程序
+#         :return:
+#         """
+#         pass
 
 
 class BollGridStrategy:
@@ -304,6 +331,381 @@ class BollGridStrategy:
         except Exception as e:
             logger.error(f"策略执行错误: {e}")
             self.close_all_positions()
+
+
+class GridTrading(models.Model):
+    _name = 'fo.trading.grid.trading'
+    _description = "智能网格策略"
+
+    def _default_name(self):
+        """
+        生成默认名称
+        """
+        now_time = get_now_datetime()
+        now_time_str = now_time.strftime("%Y%m%d")
+        trading_num = self.search_count([('create_year', '=', now_time.year),
+                                         ('create_month', '=', now_time.month),
+                                         ('create_day', '=', now_time.day)])
+        name = 'T{}-{}'.format(now_time_str, trading_num + 1)
+        return name
+
+    def _default_exchange(self):
+        """
+        获取默认交易所
+        :return:
+        """
+        instance = self.env['fo.trading.exchange'].search([('is_default', '=', True)], limit=1)
+        return instance.id
+
+    @api.depends('exchange_id')
+    def _compute_max_loss(self):
+        """
+        计算最大亏损
+        :return:
+        """
+        for record in self:
+            if not record.exchange_id:
+                continue
+
+            exchange = record.exchange_id.get_default_exchange()
+            u = exchange.user("BTC/USDT:USDT")
+            balance = u.get_balance()
+
+            self.max_loss = balance * record.exchange_id.max_loss_rate_for_position / 100 * 2
+
+    name = fields.Char("订单号", default=_default_name)
+
+    create_year = fields.Integer('年', default=lambda x: get_now_datetime().year)
+    create_month = fields.Integer('月', default=lambda x: get_now_datetime().month)
+    create_day = fields.Integer('日', default=lambda x: get_now_datetime().day)
+
+    state = fields.Selection([('1', '编辑中'), ('2', '运行中'), ('3', '已结束')], default='1', string="状态")
+
+    timeframe = fields.Selection([('1m', '1分钟'), ('5m', '5分钟'), ('15m', '15分钟'),
+                                  ('30m', '30分钟'), ('1h', '1小时'), ('4h', '4小时'),
+                                  ('1d', '天线'), ('1w', '周线')], string='偏好周期', default='4h', required=True)
+    symbol_id = fields.Many2one('fo.trading.symbol', string="交易对")
+    exchange_id = fields.Many2one('fo.trading.exchange', string="交易所", default=_default_exchange)
+    # 一些固定参数
+    atr_rate = fields.Float("ATR系数", default=2.2, help="网格间距最大值为MA均线+ ATR系数 * ATR * 2")
+    grid_num = fields.Integer("网格数量", default=6, help="每个网格的收益其实就是atr_rate * 4 / grid_count")
+    ema_len = fields.Integer("EMA均线长度", default=21, help="EMA均线长度")
+
+    # max_loss = fields.Float("最大亏损", compute=_compute_max_loss, help="最大亏损金额", store=True)
+    max_loss = fields.Float("最大亏损", required=True, default=10)
+
+    last_execute_time = fields.Datetime("上次参数更新时间", default=fields.Datetime.now)
+    next_execute_time = fields.Datetime("下次参数更新时间", default=fields.Datetime.now)
+
+    now_a = fields.Float("最大值", default=0.0, help="区间的最大值")
+    now_entry_a = fields.Float("当前A点入场价格", default=0.0)
+    now_b = fields.Float("最小值", default=0.0, help="区间的最小值")
+    now_entry_b = fields.Float("当前B点入场价格", default=0.0)
+    now_atr_value = fields.Float("当前ATR值", default=0.0, help="当前ATR值")
+    now_ema_value = fields.Float("当前EMA值", default=0.0, help="当前EMA值")
+    now_long_profit = fields.Float("当前多头收益", default=0.0, help="当前多头收益")
+    now_short_profit = fields.Float("当前空头收益", default=0.0, help="当前空头收益")
+    now_grid_positions = fields.Char("当前网格仓位", help="json仓位列表")
+    now_grid_index = fields.Integer("当前所在网格", default=0, help="当前所在网格位置")
+
+    def _cron(self):
+        """
+        定时任务
+        :return:
+        """
+        instances = self.search([('state', '=', '2')])
+
+        for instance in instances:
+            instance.run()
+
+    def init_args(self):
+        """
+        初始化数据
+        :return:
+        """
+        self.now_a = 0.0
+        self.now_entry_a = 0.0
+        self.now_b = 0.0
+        self.now_entry_b = 0.0
+        self.now_atr_value = 0.0
+        self.now_ema_value = 0.0
+        self.now_long_profit = 0.0
+        self.now_short_profit = 0.0
+        self.now_grid_positions = ''
+        self.last_execute_time = fields.Datetime.now()
+        self.next_execute_time = fields.Datetime.now()
+
+    def start(self):
+        """
+        开始监控
+        :return:
+        """
+        self.state = '2'
+        self.init_args()
+        # 设置杠杆
+        exchange = self.exchange_id.get_default_exchange()
+        m = exchange.market(self.symbol_id.name)
+        m.set_level(20)
+
+    def stop(self):
+        """
+        结束运行
+        :return:
+        """
+        self.state = '3'
+
+
+class GridTradingStrategy(models.Model):
+    _inherit = 'fo.trading.grid.trading'
+    _description = "网格策略策略部分"
+
+    def init_run(self, exchange):
+        """
+        初始化网格参数
+        :return:
+        """
+        # 判断是否需要更新数据
+        c = exchange.compute(self.symbol_id.name)
+        o = exchange.order(self.symbol_id.name)
+        kd = exchange.kdata(self.symbol_id.name)
+        # 每过一个时间周期执行一次
+        if fields.Datetime.now() < self.next_execute_time:
+            return
+
+        # 取消所以的挂单
+        o.cancel_all_order()
+
+        # 开始更新数据
+        kd.update_kdata(self.timeframe, 100)
+
+        # 获取前一天ATR的值
+        atr = kd.get_atr(self.timeframe, 14, ref=1)
+
+        # 获取前一天的EMA的值
+        ema = kd.get_ema(self.timeframe, self.ema_len, ref=1)
+
+        # 计算atr_value的值
+        atr_rate_value = atr * self.atr_rate
+        # 计算entry_a, a的值
+        entry_a = ema + atr_rate_value
+        a = entry_a + atr_rate_value
+        # 计算entry_b, b的值
+        entry_b = ema - atr_rate_value
+        b = entry_b - atr_rate_value
+
+        # 判断是否有所有的数据
+        if not all([a, b, entry_a, entry_b, atr, ema]):
+            logger.error("{} - 网格策略参数不完整".format(self.symbol_id.name))
+            logger.info(
+                "当前的参数为：a={}, b={}, entry_a={}, entry_b={}, atr={}, ema={}".format(a, b, entry_a, entry_b, atr,
+                                                                                         ema))
+            return False
+
+        # 进行赋值处理
+        self.now_a = a
+        self.now_entry_a = entry_a
+        self.now_b = b
+        self.now_entry_b = entry_b
+        self.now_atr_value = atr
+        self.now_ema_value = ema
+        # 获取grid_positions的值
+        grid_positions = c.compute_grid_positions(a, b, self.grid_num, self.max_loss)
+        if not grid_positions:
+            logger.error("{} - 网格仓位数据为空".format(self.symbol_id.name))
+            return False
+        self.now_grid_positions = json.dumps(grid_positions)
+
+        # 设置一下上次执行时间和下次执行时间
+        next_time = c.get_next_run_time(fields.Datetime.now(), self.timeframe)
+        self.next_execute_time = next_time
+        self.last_execute_time = fields.Datetime.now()
+
+    def has_amount_run(self, exchange, side, now_amount):
+        """
+        有仓位的运行, 直接进行网格的挂单和卖单操作
+        :param exchange:
+        :param side:
+        :param now_amount:
+        :return:
+        """
+        # 初始化参数
+        m = exchange.market(self.symbol_id.name)
+        c = exchange.compute(self.symbol_id.name)
+        u = exchange.user(self.symbol_id.name)
+        o = exchange.order(self.symbol_id.name)
+        grid_positions = json.loads(self.now_grid_positions)
+
+        # 计算出当前价格和当前所属的网格位置
+        now_price = m.get_now_price()
+        now_grid_index = c.get_now_grid_index(grid_positions, now_price)
+        if not now_grid_index:
+            return
+
+        if now_grid_index != self.now_grid_index:
+            # 网格有变动就取消挂单重新进行挂单
+            self.now_grid_index = now_grid_index
+            o.cancel_close_order(side)
+            o.cancel_open_order(side)
+            # 如果网格变动大于1则全部取消
+            # if abs(now_grid_index - self.now_grid_index) > 1:
+            # else:
+            #     # 只跳动一个网格
+            #     if now_grid_index < self.now_grid_index:
+
+        min_amount = m.get_min_amount()
+
+        # 进行买入的操作
+        buy_position_amount, price = c.get_index_grid_need_buy(side, grid_positions, now_grid_index)
+        need_buy_amount = buy_position_amount - now_amount
+        need_buy_amount -= o.get_open_order_amount(side, price)
+        if need_buy_amount > min_amount:
+            # 进行挂单
+            o.open_order(side, need_buy_amount, price, log=True)
+
+        # 进行卖出的操作
+        sell_position_amount, price = c.get_index_grid_need_sell(side, grid_positions, now_grid_index)
+        need_sell_amount = now_amount - sell_position_amount
+        need_sell_amount -= o.get_close_order_amount(side, price)
+        if need_sell_amount > min_amount:
+            # 进行卖出挂单
+            o.close_order(side, need_sell_amount, price, log=True)
+
+    def no_amount_run(self, exchange, side):
+        """
+        没有仓位的运行
+        需要等待价格满足才能进行买入，需要已市价买入基础仓位，开启网格
+        :param exchange:
+        :param side:
+        :return:
+        """
+        # 初始化参数
+        m = exchange.market(self.symbol_id.name)
+        now_price = m.get_now_price()
+        min_amount = m.get_min_amount()
+
+        # 如果是多头，价格未在entry_b价格之下就不买入
+        if side == 'long' and 0 < self.now_entry_b < now_price:
+            return
+
+        # 如果是空头，价格未在entry_a价格之上就不买入
+        if side == 'short' and self.now_entry_a > 0 and now_price < self.now_entry_a:
+            return
+
+        # 进一步加载参数
+        c = exchange.compute(self.symbol_id.name)
+        o = exchange.order(self.symbol_id.name)
+        grid_positions = json.loads(self.now_grid_positions)
+        now_grid_index = c.get_now_grid_index(grid_positions, now_price)
+        if not now_grid_index:
+            return
+
+        # 进行买入
+        buy_position_amount, price = c.get_index_grid_need_buy(side, grid_positions, now_grid_index)
+        need_buy_amount = buy_position_amount - o.get_open_order_amount(side, price)
+        if need_buy_amount > min_amount:
+            # 市价买入
+            o.open_order(side, need_buy_amount, log=True)
+
+    def update_profit(self, exchange):
+        """
+        更新当前收益
+        :return:
+        """
+        try:
+            position_dict = exchange.exchange.fetch_position(self.symbol_id.name)
+            position_info_list = position_dict['info']
+        except Exception as e:
+            return False
+
+        for position in position_info_list:
+            side = position['mode']
+            profit = float(position['pnl_pnl']) + float(position['unrealised_pnl'])
+
+            if side == 'dual_long':
+                self.now_long_profit = profit
+            else:
+                self.now_short_profit = profit
+
+    def stop_loss(self, exchange, side):
+        """
+        停止运行
+        :return:
+        """
+        # 没有数据不止损
+        if not all([self.now_a, self.now_b]):
+            return
+
+            # 没有收益说明没有仓位，不止损
+        if self.now_short_profit == 0 and self.now_long_profit == 0:
+            return
+
+        m = exchange.market(self.symbol_id.name)
+        now_price = m.get_now_price()
+
+        need_stop = False
+        # 如果超出范围进行止损
+        if side == 'long' and now_price < self.now_b:
+            need_stop = True
+        elif side == 'short' and now_price > self.now_a:
+            need_stop = True
+
+        # 如果已经超出最大亏损进行止损
+        all_profit = self.now_long_profit + self.now_short_profit
+        if all_profit < -self.max_loss:
+            need_stop = True
+
+        if not need_stop:
+            return
+
+        # 进行止损
+        o = exchange.order(self.symbol_id.name)
+        u = exchange.user(self.symbol_id.name)
+        self.state = '3'
+        long_amount = u.get_position_amount('long')
+        short_amount = u.get_position_amount('short')
+        if long_amount:
+            o.close_order('long', long_amount, log=True)
+        if short_amount:
+            o.close_order('short', short_amount, log=True)
+        o.cancel_all_order()
+
+    def _run(self, exchange, side):
+        """
+        封装运行
+        :return:
+        """
+        # 进行止损判断
+        self.stop_loss(exchange, side)
+
+        # 数据校验
+        grid_positions = json.loads(self.now_grid_positions)
+        if not grid_positions:
+            logger.error("{} - 网格仓位数据为空".format(self.symbol_id.name))
+            return False
+
+        u = exchange.user(self.symbol_id.name)
+        now_amount = u.get_position_amount(side)
+        if now_amount:
+            self.has_amount_run(exchange, side, now_amount)
+        else:
+            self.no_amount_run(exchange, side)
+
+    def run(self):
+        """
+        核心运行部分
+        多头核心运行
+        空头核心运行
+        :return:
+        """
+        exchange = self.exchange_id.get_default_exchange()
+        # 初始化参数
+
+        self.init_run(exchange)
+        self.update_profit(exchange)
+
+        # 进行止损的操作
+        self._run(exchange, 'long')
+        self._run(exchange, 'short')
 
 
 if __name__ == "__main__":

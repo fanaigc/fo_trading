@@ -8,3 +8,4 @@ fo_trading.access_fo_trading_notification,access_fo_trading_notification,fo_trad
 fo_trading.access_fo_trading_positions,access_fo_trading_positions,fo_trading.model_fo_trading_positions,base.group_user,1,1,1,1
 fo_trading.access_fo_trading_trading,access_fo_trading_trading,fo_trading.model_fo_trading_trading,base.group_user,1,1,1,1
 fo_trading.access_fo_trading_order,access_fo_trading_order,fo_trading.model_fo_trading_trading_order,base.group_user,1,1,1,1
+fo_trading.access_fo_trading_grid_trading,access_fo_trading_grid_trading,fo_trading.model_fo_trading_grid_trading,base.group_user,1,1,1,1

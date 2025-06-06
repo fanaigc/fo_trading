@@ -367,7 +367,7 @@ class GridTrading(models.Model):
             if not record.exchange_id:
                 continue
 
-            exchange = record.exchange_id.get_default_exchange()
+            exchange = record.exchange_id.get_exchange()
             u = exchange.user("BTC/USDT:USDT")
             balance = u.get_balance()
 
@@ -381,9 +381,8 @@ class GridTrading(models.Model):
 
     state = fields.Selection([('1', '编辑中'), ('2', '运行中'), ('3', '已结束')], default='1', string="状态")
 
-    timeframe = fields.Selection([('1m', '1分钟'), ('5m', '5分钟'), ('15m', '15分钟'),
-                                  ('30m', '30分钟'), ('1h', '1小时'), ('4h', '4小时'),
-                                  ('1d', '天线'), ('1w', '周线')], string='偏好周期', default='4h', required=True)
+    timeframe = fields.Selection([('15m', '15分钟'), ('30m', '30分钟'), ('1h', '1小时'), ('4h', '4小时'),
+                                  ('1d', '天线')], string='偏好周期', default='4h', required=True)
     symbol_id = fields.Many2one('fo.trading.symbol', string="交易对")
     exchange_id = fields.Many2one('fo.trading.exchange', string="交易所", default=_default_exchange)
     # 一些固定参数
@@ -452,7 +451,7 @@ class GridTrading(models.Model):
         self.state = '2'
         self.init_args()
         # 设置杠杆
-        exchange = self.exchange_id.get_default_exchange()
+        exchange = self.exchange_id.get_exchange()
         m = exchange.market(self.symbol_id.name)
         m.set_level(20)
 
@@ -744,7 +743,7 @@ class GridTradingStrategy(models.Model):
         空头核心运行
         :return:
         """
-        exchange = self.exchange_id.get_default_exchange()
+        exchange = self.exchange_id.get_exchange()
         # 初始化参数
 
         self.init_run(exchange)

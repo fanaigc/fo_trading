@@ -82,7 +82,7 @@ class Monitor(models.Model):
         exchange = self.env['fo.trading.exchange'].get_default_exchange()
         kd = exchange.kdata(self.symbol_ids[0].name)
         res = self.start(kd)
-        print(res)
+        # print(res)
 
     def start(self, kd):
         """

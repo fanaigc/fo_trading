@@ -5,7 +5,7 @@
         <field name="state">code</field>
         <field name="code">model._cron()</field>
         <field name="user_id" ref="base.user_root"/>
-        <field name="interval_number">1</field>
+        <field name="interval_number">5</field>
         <field name="interval_type">minutes</field>
         <field name="nextcall" eval="(DateTime.now().replace(second=1))" />
     </record>
@@ -31,7 +31,9 @@
                         <field name="atr_rate"/>
                         <field name="now_long_profit"/>
                         <field name="now_short_profit"/>
-                        <field name="now_grid_positions" readonly="1"/>
+<!--                        <field name="now_grid_positions" readonly="1"/>-->
+                        <field name="now_long_grid_positions" readonly="1"/>
+                        <field name="now_short_grid_positions" readonly="1"/>
                         <field name="last_execute_time" readonly="1"/>
                         <field name="next_execute_time" readonly="1"/>
                         <field name="now_a" readonly="1"/>
@@ -52,6 +54,7 @@
             <list string="fo_trading_grid_trading_tree">
                 <field name="name" readonly="1"/>
                 <field name="symbol_id"/>
+                <field name="state"/>
                 <field name="timeframe"/>
                 <field name="max_loss"/>
                 <field name="now_long_profit"/>

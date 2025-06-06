@@ -259,19 +259,37 @@ class Compute(BaseFunc):
         # print(grid_prices)
 
         # 计算每个网格买的份数 100x + 90x - 80*2x = max_loss
-        buy_value = sum(grid_prices[:-1])
-        sell_value = grid_prices[-1] * len(grid_prices[:-1])
+        buy_value = sum(grid_prices[1:-1])
+        sell_value = grid_prices[-1] * len(grid_prices[1:-1])
         grid_amount = max_loss / (buy_value - sell_value)
         # print(grid_amount)
 
         # 组合新的数据进行返回
-        grid_positions = []
+        long_amount = 0
+        long_amount_list = []
+        for i in range(len(grid_prices)):
+            if i == 1:
+                long_amount = long_amount + grid_amount * 1.5
+            elif i == 2:
+                long_amount = long_amount + grid_amount * 1.25
+            elif i == 3:
+                long_amount = long_amount + grid_amount * 1.1
+            elif i == len(grid_prices) - 1 or i == 0:
+                long_amount = 0
+            else:
+                long_amount = long_amount + grid_amount
+            long_amount_list.append(long_amount)
+
+        short_amount_list = list(reversed(long_amount_list))
+
+        # 进行数据组合
         i = 0
+        grid_positions = []
         for price in grid_prices:
             grid_positions.append({
                 'price': price,
-                'long_amount': 0 if i == grid_num else grid_amount * (i + 1),
-                'short_amount': 0 if i == 0 else grid_amount * (grid_num - i + 1),
+                'long_amount': long_amount_list[i],
+                'short_amount': short_amount_list[i],
             })
             i += 1
         # print(grid_positions)
@@ -318,7 +336,7 @@ class Compute(BaseFunc):
         :return:
         """
         if side == 'long':
-            need_buy_info = grid_positions[now_grid_index-1]
+            need_buy_info = grid_positions[now_grid_index - 1]
             need_buy_amount = need_buy_info['long_amount']
         else:
             need_buy_info = grid_positions[now_grid_index]

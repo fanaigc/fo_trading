@@ -84,7 +84,7 @@ class Condition(models.Model):
             value = (self.get_func_value(kd, args1), self.get_func_value(kd, args2))
         elif self.load_mode == '2':
             value = (self.get_talib_value(kd, args1), self.get_talib_value(kd, args2))
-        print("{} - {}:{} - 返回值：{}".format(kd.symbol, self.name, args, value))
+        # print("{} - {}:{} - 返回值：{}".format(kd.symbol, self.name, args, value))
         return value
 
     def _parse_args(self, args):

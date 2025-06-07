@@ -505,13 +505,14 @@ class GridTradingStrategy(models.Model):
 
         # 计算网格数量， 15m一个ATR的值为一个网格
         # 先计算出grid_value的值
-        if self.timeframe == '15m':
-            grid_value = atr
-        else:
-            kd.update_kdata('15m', 100)
-            grid_value = kd.get_atr('15m', 30, ref=1)
+        # if self.timeframe == '15m':
+        #     grid_value = atr
+        # else:
+        #     kd.update_kdata('15m', 100)
+        #     grid_value = kd.get_atr('15m', 30, ref=1)
         # 0.8为系数
-        grid_value = grid_value * 1
+        # grid_value = grid_value * 1
+        grid_value = atr * 0.5
         # 计算网格数量
         grid_num = int((exit_a - b) / grid_value)
         # 最小要5个网格

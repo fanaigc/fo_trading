@@ -26,19 +26,20 @@
                         <field name="exchange_id"/>
                         <field name="symbol_id"/>
                         <field name="timeframe"/>
+                        <field name="max_loss"/>
                         <field name="a"/>
                         <field name="b"/>
-                        <field name="exit_a"/>
-                        <field name="entry_a"/>
-                        <field name="entry_b"/>
-                        <field name="exit_b"/>
+
+                        <field name="exit_a" readonly="1"/>
+                        <field name="entry_a" readonly="1" />
+                        <field name="entry_b" readonly="1" />
+                        <field name="exit_b" readonly="1"/>
                         
-                        <field name="max_loss"/>
-                        <field name="max_profit"/>
-                        <field name="long_profit"/>
-                        <field name="short_profit"/>
+                        <field name="max_profit" readonly="1" />
+                        <field name="long_profit" readonly="1" />
+                        <field name="short_profit" readonly="1"/>
 <!--                        <field name="grid_num"/>-->
-                        <field name="atr_rate"/>
+<!--                        <field name="atr_rate"/>-->
 <!--                        <field name="now_long_profit"/>-->
 <!--                        <field name="now_short_profit"/>-->
 <!--                        <field name="now_grid_positions" readonly="1"/>-->

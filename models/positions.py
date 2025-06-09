@@ -272,7 +272,9 @@ class Positions(models.Model):
         :return:
         """
         # 1. 获取交易所对象
-        exchange = self.env['fo.trading.exchange'].get_default_exchange()
+        # exchange = self.env['fo.trading.exchange'].get_default_exchange()
+        exchange_obj = self.env['fo.trading.exchange'].search([('is_default', '=', True)], limit=1)
+        exchange = exchange_obj.get_exchange()
         if not exchange:
             raise exceptions.ValidationError("请先创建默认交易所")
 
@@ -287,7 +289,8 @@ class Positions(models.Model):
 
             # 检查一下是否在自动网格中已经有运行，如果有直接跳过
             grid_instance = self.env['fo.trading.grid.trading'].search([('state', '=', '2'),
-                                                                        ('symbol_id', '=', position_data['symbol_id'])])
+                                                                        ('symbol_id', '=', position_data['symbol_id']),
+                                                                        ('exchange_id', '=', exchange_obj.id),])
             if grid_instance:
                 continue
 

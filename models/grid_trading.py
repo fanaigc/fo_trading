@@ -365,6 +365,8 @@ class GridTrading(models.Model):
         # 计算出止盈价格
         self.exit_a = self.entry_a + diff_value / 4
         self.exit_b = self.entry_b - diff_value / 4
+        self.last_execute_time = fields.Datetime.now()
+        self.next_execute_time = fields.Datetime.now()
 
     name = fields.Char("订单号", default=_default_name)
 
@@ -453,8 +455,6 @@ class GridTrading(models.Model):
         atr_rate_value = atr * 2.1
         self.a = ema + atr_rate_value * 2
         self.b = ema - atr_rate_value * 2
-        self.last_execute_time = fields.Datetime.now()
-        self.next_execute_time = fields.Datetime.now()
 
     def init_args(self):
         """
